@@ -2,22 +2,22 @@
 
 ## Coverage
 
-The unit/component suite has 72 passing tests, including all 12 puzzles, legal and illegal swaps, hint recovery, scoring, React interactions, progress/storage failures, studio edits, exports, and sound scheduling/resource cleanup.
+The unit/component suite has 78 passing tests, including all 12 puzzles, legal and illegal swaps, hint recovery, scoring, React interactions, progress/storage failures, studio edits, exports, and sound scheduling/resource cleanup.
 
 Coverage includes **every production TypeScript/TSX source file**, including the React app, engine, audio, and bootstrap. Only tests and test setup are excluded. The baseline was 26.86% statements across the whole app, despite high engine coverage.
 
 | Metric | Final coverage |
 | --- | ---: |
-| Statements | 98.32% |
-| Branches | 97.56% |
-| Functions | 99.24% |
+| Statements | 98.28% |
+| Branches | 97.06% |
+| Functions | 98.55% |
 | Lines | 100% |
 
 Each source file must individually meet an 81% floor in all four metrics. CI runs `npm run test:coverage`, and a coverage regression fails the deployment.
 
 ## Recorded browser tests
 
-There are 27 end-to-end scenarios: nine cases each in desktop and mobile Chromium, including touch input emulation. The normal viewports are 1440×1000 and 390×844; narrow-layout cases use 320×720. Nine more viewport-specific scenarios play the entire campaign and use the studio: 320×480, 320×568, 360×640, 375×667, 390×844, 412×915, 568×320, 667×375, and 844×390. These use touch input and branch buttons without page or tree scrolling. Every move checks document dimensions, card bounds and minimum size, and every visible control/preview against the board edges. Each video uses its viewport dimensions. The 320×480 case also covers a reduced visible area caused by browser controls.
+There are 29 end-to-end scenarios: ten cases each in desktop and mobile Chromium, including touch input emulation. The normal viewports are 1440×1000 and 390×844; narrow-layout cases use 320×720, and mouse/touch edge-scrolling cases use 800×1000 to exercise an overflowing tree pane. Nine more viewport-specific scenarios play the entire campaign and use the studio: 320×480, 320×568, 360×640, 375×667, 390×844, 412×915, 568×320, 667×375, and 844×390. These use touch input and branch buttons without page or tree scrolling. Every move checks document dimensions, card bounds and minimum size, and every visible control/preview against the board edges. Each video uses its viewport dimensions. The 320×480 case also covers a reduced visible area caused by browser controls.
 
 1. First-puzzle play, selection/cancel, win, completion hides the tree, review/hide controls, undo/reset, scoring, and saved progress. Phone-size runs also reveal/hide the solved tree on the first and final puzzles and check both views for overflow. Keyboard focus moves to the next puzzle on completion and to the hide control during review.
 2. Every campaign puzzle solved with hints through the interface.
@@ -29,6 +29,8 @@ There are 27 end-to-end scenarios: nine cases each in desktop and mobile Chromiu
 8. A full 31-node studio mosaic, split limit, fit bounds, draft restoration, export, collapse/undo, and immediate reset centering. Both downloaded PNGs are 512×512 with the eight expected colors.
 9. Narrow-screen help and studio, horizontal-overflow checks, and absence of third-party asset requests.
 
+10. Edge-assisted mouse and touch drags: hold a stationary pointer at the bottom/right pane edge, reveal an initially clipped target, drop on its new position, keep page scroll unchanged, and stop pane scrolling after release.
+
 The tests run against the production build. Every test records video, and test instrumentation captures the browser's real Web Audio output. The review helper encodes H.264/AAC MP4s, measures audio peaks, extracts timestamped frames at 2 fps from those MP4s, and builds contact sheets plus a playable HTML index. Audio alignment is approximate to the recording start.
 
 Open `qa/final/index.html` after a local run. Each scenario has its own `video.mp4`, contact sheets, frames, and result metadata. These generated artifacts are ignored by Git. CI retains MP4s, contact sheets, metadata, and coverage as `coverage-and-playthroughs` for 14 days.
@@ -37,6 +39,7 @@ Open `qa/final/index.html` after a local run. Each scenario has its own `video.m
 
 | Observed issue | Change and verification |
 | --- | --- |
+| A dragged card cannot reach a target outside the visible pane. | Frame-based scrolling near pane edges, with speed based on proximity. Mouse/touch playthroughs verify horizontal and vertical movement, a successful distant drop, no page scrolling, and cleanup after release. Unit checks cover stationary holds, reversal, limits, viewport clipping, and cancellation. |
 | The solved tree still looks playable after a win. | Replace it with an explicit Puzzle complete panel and stars. Show puzzle again reveals the solved tree without changing the score; Hide puzzle returns to the result. Undo, Reset, and the next puzzle clear the review state. Opening review also clears the celebration so it cannot cover the tree. |
 | Dragging has no moving visual feedback. | A translucent copy preserves the grab offset and follows the pointer outside the tree frame. It ignores hit testing, stays out of the accessibility tree, and clears on drop or cancellation. A viewport overlay prevents edge drags from adding scrollbars. |
 | Mobile players lose sight of target art while editing deep trees. | A viewport-sized play surface retains previews and actions throughout the campaign. |

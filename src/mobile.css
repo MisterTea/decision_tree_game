@@ -55,7 +55,7 @@
 .compact-play .stats-row > div > span { font-size: 8px; }
 .compact-play .tree-area { flex: 1; min-height: 0; margin: 0; justify-content: flex-start; }
 .compact-play .tree-view { flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; }
-.compact-play .tree-scroll { flex: 1; min-height: 0; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.compact-play .tree-scroll { flex: 1; min-height: 0; max-height: none; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .compact-play .tree-legend { display: none; }
 .compact-play .tree-node, .compact-play .tree-node.leaf { min-width: 104px; min-height: 44px; font-size: 12px; }
 .compact-play .tree-node .node-swatch { width: 15px; height: 15px; }

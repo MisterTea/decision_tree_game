@@ -6,6 +6,7 @@ import type { Color, Level, Move, Tree } from './engine';
 import { createSoundPlayer, readSoundEnabled, saveSoundEnabled } from './feedback';
 import type { Sound } from './feedback';
 import { useCompactScreen } from './responsive';
+import { startDragScroll } from './drag-scroll';
 
 const chapters = [
   { title: 'Color stories', subtitle: 'Swap color leaves', icon: Palette },
@@ -58,26 +59,34 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fi
   ] : [])] : diagram.placed;
   const width = focused ? horizontal ? 384 : 268 : diagram.width, height = focused ? horizontal ? 112 : 160 : diagram.height;
   useEffect(() => {
-    const measure = () => { setViewportWidth(scrollRef.current?.clientWidth || width); setViewportHeight(scrollRef.current?.clientHeight || height); };
+    const measure = () => {
+      const pane = scrollRef.current;
+      const style = pane ? getComputedStyle(pane) : null;
+      const padding = (parseFloat(style?.paddingTop || '') || 0) + (parseFloat(style?.paddingBottom || '') || 0);
+      const maxHeight = compact ? 0 : parseFloat(style?.maxHeight || '');
+      setViewportWidth(pane?.clientWidth || width);
+      setViewportHeight(Math.max(1, (maxHeight || pane?.clientHeight || height) - padding));
+    };
     measure();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : undefined;
     if (scrollRef.current) observer?.observe(scrollRef.current);
     window.addEventListener('resize', measure);
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
-  }, [width, height]);
+  }, [width, height, compact]);
   useEffect(() => {
     setFocusId(tree.id);
   }, [level.id, sandbox, tree.id]);
-  const scale = compact ? Math.min(1, viewportWidth / width, viewportHeight / height) : fit ? Math.min(1, viewportWidth / width) : 1;
-  const dragged = useRef<{ id: string; pointer: number; startX: number; startY: number; offsetX: number; offsetY: number; width: number; height: number; fontSize: number; active: boolean } | null>(null);
+  const scale = compact || fit ? Math.min(1, viewportWidth / width, viewportHeight / height) : 1;
+  const dragged = useRef<{ id: string; pointer: number; startX: number; startY: number; x: number; y: number; offsetX: number; offsetY: number; width: number; height: number; fontSize: number; active: boolean } | null>(null);
+  const stopDragScroll = useRef<(() => void) | null>(null);
   const [ghost, setGhost] = useState<{ node: Tree; x: number; y: number; width: number; height: number; fontSize: number } | null>(null);
   const suppressClick = useRef(false);
-  const cancelDrag = () => { if (dragged.current?.active) suppressClick.current = true; dragged.current = null; setGhost(null); };
+  const cancelDrag = () => { stopDragScroll.current?.(); stopDragScroll.current = null; if (dragged.current?.active) suppressClick.current = true; dragged.current = null; setGhost(null); };
   useEffect(() => { cancelDrag(); }, [tree, level.id, sandbox, focusId]);
   useEffect(() => {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') cancelDrag(); };
     document.addEventListener('keydown', escape); window.addEventListener('blur', cancelDrag);
-    return () => { document.removeEventListener('keydown', escape); window.removeEventListener('blur', cancelDrag); };
+    return () => { document.removeEventListener('keydown', escape); window.removeEventListener('blur', cancelDrag); stopDragScroll.current?.(); };
   }, []);
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const available = (node: Tree) => sandbox || (level.mode === 'leaves' ? node.kind === 'leaf' : level.mode === 'rules' ? node.kind === 'split' : true);
@@ -107,13 +116,15 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fi
           suppressClick.current = false; if (!eligible || sandbox || event.button !== 0) return;
           const box = event.currentTarget.getBoundingClientRect();
           const ratio = box.width / (event.currentTarget.offsetWidth || box.width || 1);
-          dragged.current = { id: node.id, pointer: event.pointerId, startX: event.clientX, startY: event.clientY, offsetX: event.clientX - box.left, offsetY: event.clientY - box.top, width: box.width, height: box.height, fontSize: parseFloat(getComputedStyle(event.currentTarget).fontSize) * ratio, active: false };
+          dragged.current = { id: node.id, pointer: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, offsetX: event.clientX - box.left, offsetY: event.clientY - box.top, width: box.width, height: box.height, fontSize: parseFloat(getComputedStyle(event.currentTarget).fontSize) * ratio, active: false };
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
         onPointerMove={event => {
           const drag = dragged.current;
           if (!drag || drag.pointer !== event.pointerId) return;
+          drag.x = event.clientX; drag.y = event.clientY;
           if (!drag.active && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 4) return;
+          if (!drag.active) stopDragScroll.current = startDragScroll(scrollRef.current, () => dragged.current);
           drag.active = true;
           setGhost({ node, x: event.clientX - drag.offsetX, y: event.clientY - drag.offsetY, width: drag.width, height: drag.height, fontSize: drag.fontSize });
         }}
@@ -280,7 +291,7 @@ export default function App() {
               <div className="stats-row">{sandbox ? <><div><strong>{nodes(tree).filter(n => n.kind === 'split').length}</strong><span>decisions</span></div><div><strong>{nodes(tree).filter(n => n.kind === 'leaf').length}</strong><span>color leaves</span></div><div><strong>8 × 8</strong><span>possibilities</span></div></> : <><div className={solved ? 'stat-success' : ''}><strong>{Math.round(match * 100)}<small>%</small></strong><span>picture match</span></div><div><strong>{moves.toString().padStart(2, '0')}</strong><span>{moves === 1 ? 'swap made' : 'swaps made'}</span></div><div><strong>{level.par}<small>{level.par === 1 ? ' swap' : ' swaps'}</small></strong><span>three-star target</span></div></>}</div>
               {showCompletion && <div className="completion-panel success-card" aria-live="polite"><span className="completion-icon"><Check size={18} />PUZZLE COMPLETE</span><h3>{level.id === 12 ? 'A beautiful finish.' : 'Everything clicked.'}</h3><p>Picture restored in {moves} {moves === 1 ? 'swap' : 'swaps'}.</p><StarRow count={stars(moves, level.par)} /><button className="button secondary" onClick={() => { setBurst(null); setReviewSolved(true); }}>Show puzzle again</button></div>}
               <div className={`tree-area ${solved ? 'tree-solved' : ''}`} hidden={showCompletion}>{!showCompletion && <TreeView tree={tree} selected={selected} onSelect={selectNode} onSwap={swapNodes} level={level} sandbox={sandbox} hinted={hinted} fit={fitTree} compact={compact} onExplore={() => setFitTree(false)} />}
-                {!sandbox && <div className="tree-legend"><span><GitBranch size={12} /> A question</span><span><span className="legend-square" /> A color</span><span>yes ← → no</span><span className="pan-tip">{compact ? 'Open a branch to explore' : 'Scroll sideways to explore'}</span></div>}
+                {!sandbox && <div className="tree-legend"><span><GitBranch size={12} /> A question</span><span><span className="legend-square" /> A color</span><span>yes ← → no</span><span className="pan-tip">{compact ? 'Open a branch to explore' : 'Drag near an edge to scroll'}</span></div>}
               </div>
 
               {sandbox ? <div className="studio-controls"><div className="studio-controls-title"><Scissors size={16} /><strong>{selectedNode ? selectedNode.kind === 'leaf' ? 'Make this region yours' : 'Edit this decision' : 'Select a card to start creating'}</strong></div><p>Questions use the full canvas coordinates, from 0 to 7.</p>

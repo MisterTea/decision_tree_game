@@ -17,11 +17,13 @@ root.mkdir(parents=True, exist_ok=True)
 manifest = []
 for source in sorted(root.rglob('video.webm')):
     output = source.with_suffix('.mp4')
+    source_duration = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', str(source)]))
     command = ['ffmpeg', '-y', '-loglevel', 'error', '-i', str(source)]
     audio = source.parent / 'audio.webm'
     if audio.exists():
         audio_info = json.loads((source.parent / 'audio.json').read_text())
-        command += ['-itsoffset', str(audio_info['offset']), '-i', str(audio), '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-af', 'apad', '-shortest']
+        # Bound padded audio explicitly: some FFmpeg versions buffer indefinitely with -shortest.
+        command += ['-itsoffset', str(audio_info['offset']), '-i', str(audio), '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-af', 'apad', '-t', str(source_duration)]
     command += ['-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-c:v', 'libx264', '-crf', '20', '-preset', 'fast', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', str(output)]
     inputs = [source, *([audio, source.parent / 'audio.json'] if audio.exists() else [])]
     encode = not output.exists() or output.stat().st_mtime < max(path.stat().st_mtime for path in inputs)

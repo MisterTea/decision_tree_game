@@ -27,6 +27,7 @@
 .completion-panel .stars svg{width:23px;height:23px}
 .review-toggle{min-height:30px;margin:0;padding:2px 6px;font-size:11px}
 .logic-panel:has(.completion-panel) .feedback-burst>span{display:none}
+.tree-scroll{max-height:420px;overflow:auto;overscroll-behavior:contain;scroll-behavior:auto}
 .feedback-burst{pointer-events:none;position:absolute;left:50%;top:48%;z-index:5;width:1px;height:1px}
 .feedback-burst i{position:absolute;width:7px;height:7px;border-radius:2px;background:#d4ab5e;opacity:0;animation:particle-pop .7s ease-out var(--delay) both;transform:rotate(var(--angle))}
 .feedback-burst i:nth-child(3n){background:#8cae72;border-radius:50%}.feedback-burst i:nth-child(3n+1){background:#de9a82}.feedback-burst i:nth-child(4n){background:#aaa1c4}

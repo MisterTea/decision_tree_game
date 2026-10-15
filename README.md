@@ -14,7 +14,7 @@ The 12-puzzle campaign introduces three mechanics:
 - **A twist of logic:** swap decision rules while their children stay put.
 - **Room to grow:** swap whole subtrees, including their descendants. Separate branches can have different sizes, so the topology can change. Ancestor/descendant swaps are forbidden.
 
-Click or tap two compatible cards, or drag one onto another. While dragging, a translucent copy follows your mouse or finger; the original stays in place until the drop. Keyboard players can use Tab and Enter. Undo, reset, hints, live pixel previews, and optional mismatch markers help you explore without a timer or hard move limit. Match the picture within the swap target for three stars. Solving a puzzle replaces the decision tree with a completion panel. Use **Show puzzle again** to review the solved tree and **Hide puzzle** to return to the result. Undo and Reset return to playing; Next puzzle continues the journey. Your best completed scores are stored locally in this browser; storage is optional and no account is required.
+Click or tap two compatible cards, or drag one onto another. While dragging, a translucent copy follows your mouse or finger; the original stays in place until the drop. Hold near an edge of an overflowing tree pane to scroll toward distant cards; scrolling continues while you hold still and stops on drop or cancellation. Keyboard players can use Tab and Enter. Undo, reset, hints, live pixel previews, and optional mismatch markers help you explore without a timer or hard move limit. Match the picture within the swap target for three stars. Solving a puzzle replaces the decision tree with a completion panel. Use **Show puzzle again** to review the solved tree and **Hide puzzle** to return to the result. Undo and Reset return to playing; Next puzzle continues the journey. Your best completed scores are stored locally in this browser; storage is optional and no account is required.
 
 The **Creative studio** lets you split regions, edit rules, paint leaves, collapse branches, and download your art as a PNG. Your draft survives switching between the campaign and studio during a session. Reloading or resetting clears the draft, so export art you want to keep. Trees are limited to 31 nodes to keep the editor manageable.
 
@@ -62,6 +62,7 @@ GitHub Pages is configured to use GitHub Actions. Every push to `main` checks un
 - `src/App.tsx`: React game, accessible controls, progress, and studio.
 - `src/style.css` and `src/mobile.css`: visual design, viewport-sized phone layouts, and reduced motion.
 - `src/responsive.ts`: phone/orientation media-query tracking.
+- `src/drag-scroll.ts`: frame-based edge scrolling during drags.
 - `src/engine.test.ts`: core behavior and campaign validation.
 - `tests/game.spec.ts`: desktop, mobile, input, and studio browser tests.
 - `tests/phone-layout.spec.ts`: full campaign and studio without scrolling at nine phone sizes.
