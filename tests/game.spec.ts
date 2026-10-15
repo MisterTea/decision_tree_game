@@ -25,6 +25,8 @@ test('first puzzle supports input, undo, reset, score, and persistent progress',
   await expect(page.locator('.tree-area')).toBeHidden();
   await page.getByRole('button', { name: 'Show puzzle again', exact: true }).click();
   await expect(page.locator('.tree-area')).toBeVisible();
+  await expect(page.locator('.feedback-burst')).toHaveCount(0);
+  await page.screenshot({ path: test.info().outputPath('reviewed-tree.png') });
   await expect(page.getByRole('img', { name: 'Your picture, 100 percent matching', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Hide puzzle', exact: true }).click();
   await expect(page.locator('.tree-area')).toBeHidden();

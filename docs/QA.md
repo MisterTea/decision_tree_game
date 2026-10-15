@@ -37,7 +37,7 @@ Open `qa/final/index.html` after a local run. Each scenario has its own `video.m
 
 | Observed issue | Change and verification |
 | --- | --- |
-| The solved tree still looks playable after a win. | Replace it with an explicit Puzzle complete panel and stars. Show puzzle again reveals the solved tree without changing the score; Hide puzzle returns to the result. Undo, Reset, and the next puzzle clear the review state. |
+| The solved tree still looks playable after a win. | Replace it with an explicit Puzzle complete panel and stars. Show puzzle again reveals the solved tree without changing the score; Hide puzzle returns to the result. Undo, Reset, and the next puzzle clear the review state. Opening review also clears the celebration so it cannot cover the tree. |
 | Dragging has no moving visual feedback. | A translucent copy preserves the grab offset and follows the pointer outside the tree frame. It ignores hit testing, stays out of the accessibility tree, and clears on drop or cancellation. A viewport overlay prevents edge drags from adding scrollbars. |
 | Mobile players lose sight of target art while editing deep trees. | A viewport-sized play surface retains previews and actions throughout the campaign. |
 | A large tree is difficult to use without scrolling on a phone. | Readable branch explorer with Open/Up/Root controls, a path selector, and an optional whole-tree overview. Selection survives branch navigation. |

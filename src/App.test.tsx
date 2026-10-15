@@ -148,6 +148,7 @@ test('solving hides the tree, review can be toggled, and undo or replay starts a
   click('Show puzzle again');
   expect(document.querySelector('.tree-area')).toBeVisible(); expect(button('Hide puzzle')).toHaveFocus();
   expect(document.querySelector('.completion-panel')).toBeNull(); expect(score()).toContain('100 percent');
+  expect(document.querySelector('.feedback-burst')).toBeNull();
   fireEvent.click(node('b')); expect(node('b')).toHaveAttribute('aria-pressed', 'false');
   click('Hide puzzle'); expect(document.querySelector('.tree-area')).not.toBeVisible();
   click('Show puzzle again'); click('Undo');
