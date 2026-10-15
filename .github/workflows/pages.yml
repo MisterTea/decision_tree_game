@@ -23,8 +23,31 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
-      - run: npm run build
+      - run: npm run test:coverage
+      - name: Install browser and recording tools
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg python3-pil
+      - name: Play the campaign and studio on desktop and mobile
+        run: npm run test:e2e
+      - name: Prepare MP4 playthroughs and review frames
+        if: always()
+        run: python3 scripts/review-recordings.py qa/final
+      - name: Save coverage and playthrough recordings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-and-playthroughs
+          retention-days: 14
+          path: |
+            coverage/
+            qa/final/**/*.mp4
+            qa/final/**/scenario.json
+            qa/final/**/audio.json
+            qa/final/recordings.json
+            qa/final/index.html
+            qa/final/**/review-*.jpg
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:

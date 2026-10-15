@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, HelpCircle, Layers, Leaf, Lightbulb, Maximize2, MousePointer2, Palette, RotateCcw, Sparkles, Sprout, Star, Undo2, X, Download, Scissors } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, HelpCircle, Layers, Leaf, Lightbulb, Maximize2, MousePointer2, Palette, RotateCcw, Sparkles, Sprout, Star, Undo2, X, Download, Scissors, Volume2, VolumeX } from 'lucide-react';
 import { accuracy, canSwap, extendRoute, find, hint, levels, nodes, palette, pixels, SIZE, stars, swap, update, visits } from './engine';
 import type { Color, Level, Move, Tree } from './engine';
+import { createSoundPlayer, readSoundEnabled, saveSoundEnabled } from './feedback';
+import type { Sound } from './feedback';
 
 const chapters = [
   { title: 'Color stories', subtitle: 'Swap color leaves', icon: Palette },
@@ -38,13 +40,23 @@ function layout(tree: Tree) {
   return { placed, width: cursor * 128 + 12, height: Math.max(...placed.map(p => p.y)) + 70 };
 }
 
-function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted }: { tree: Tree; selected: string | null; onSelect: (id: string) => void; onSwap: (a: string, b: string) => void; level: Level; sandbox: boolean; hinted: Move | null }) {
+function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fit }: { tree: Tree; selected: string | null; onSelect: (id: string) => void; onSwap: (a: string, b: string) => void; level: Level; sandbox: boolean; hinted: Move | null; fit: boolean }) {
   const { placed, width, height } = layout(tree);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [viewportWidth, setViewportWidth] = useState(width);
+  useEffect(() => {
+    const measure = () => setViewportWidth(scrollRef.current?.clientWidth || width);
+    measure(); window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure);
+  }, [width]);
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, (width - scrollRef.current.clientWidth) / 2);
+  }, [level.id, sandbox]);
+  const scale = fit ? Math.min(1, viewportWidth / width) : 1;
   const dragged = useRef<string | null>(null);
   const suppressClick = useRef(false);
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const available = (node: Tree) => sandbox || (level.mode === 'leaves' ? node.kind === 'leaf' : level.mode === 'rules' ? node.kind === 'split' : true);
-  return <div className="tree-scroll"><div className="tree-canvas" style={{ width, height }}>
+  return <div className="tree-scroll" ref={scrollRef}><div className="tree-scaled" style={{ width: width * scale, height: height * scale }}><div className="tree-canvas" style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
     <svg className="connections" width={width} height={height} aria-hidden="true">{placed.filter(p => p.parent).map(p => {
       const parent = placed.find(q => q.node.id === p.parent)!;
       const emphasized = selected && (find(tree, selected) && find(find(tree, selected)!, p.node.id));
@@ -70,7 +82,7 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted }: 
         {selected === node.id && <span className="picked-label">SELECTED</span>}
       </button>;
     })}
-  </div></div>;
+  </div></div></div>;
 }
 
 export default function App() {
@@ -85,12 +97,22 @@ export default function App() {
   const [modal, setModal] = useState<'help' | 'levels' | null>(null);
   const [sandbox, setSandbox] = useState(false);
   const [difference, setDifference] = useState(false);
+  const [fitTree, setFitTree] = useState(false);
   const [hinted, setHinted] = useState<Move | null>(null);
   const [notice, setNotice] = useState('');
   const [axis, setAxis] = useState<'x' | 'y'>('x');
   const [threshold, setThreshold] = useState(4);
   const [paint, setPaint] = useState<Color>('peach');
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [soundEnabled, setSoundEnabled] = useState(readSoundEnabled);
+  const audio = useRef<ReturnType<typeof createSoundPlayer> | null>(null);
+  const [burst, setBurst] = useState<{ id: number; kind: Sound } | null>(null);
+  const studioDraft = useRef<Tree | null>(null);
+  function feedback(kind: Sound) {
+    audio.current ??= createSoundPlayer(); audio.current.play(kind, soundEnabled);
+    if (['swap', 'win', 'edit', 'export'].includes(kind)) setBurst(old => ({ id: (old?.id ?? 0) + 1, kind }));
+  }
+  useEffect(() => () => audio.current?.close(), []);
   const pick = (id: string | null) => { selectedRef.current = id; setSelected(id); };
   const match = accuracy(tree, level.target), solved = !sandbox && match === 1;
   const moves = history.length;
@@ -117,47 +139,56 @@ export default function App() {
     document.addEventListener('keydown', keyboard); return () => document.removeEventListener('keydown', keyboard);
   }, []);
 
-  function load(index: number, creative = false) {
-    setLevelIndex(index); setSandbox(creative); setTree(creative ? { id: 'root', kind: 'leaf', color: 'sky' } : levels[index].initial);
+  function load(index: number, creative = false, reset = false) {
+    if (sandbox) studioDraft.current = tree;
+    feedback('navigate'); setBurst(null);
+    setLevelIndex(index); setSandbox(creative); setTree(creative ? (!reset && studioDraft.current) || { id: 'root', kind: 'leaf', color: 'sky' } : levels[index].initial);
     setRoute(creative ? [] : levels[index].scramble); setHistory([]); pick(null); setHinted(null); setNotice(''); setDifference(false); setModal(null);
   }
   function selectNode(id: string) {
     if (solved) return;
-    if (sandbox) { pick(id); setNotice(''); return; }
+    if (sandbox) {
+      const node = find(tree, id);
+      if (node?.kind === 'split') { setAxis(node.rule.axis); setThreshold(node.rule.value); }
+      if (node?.kind === 'leaf') setPaint(node.color);
+      pick(id); setNotice(''); feedback('select'); return;
+    }
     const previous = selectedRef.current;
-    if (!previous || previous === id) { pick(previous === id ? null : id); return; }
+    if (!previous || previous === id) { pick(previous === id ? null : id); feedback('select'); return; }
     if (!canSwap(tree, previous, id, level.mode)) {
-      setNotice(level.mode === 'subtrees' ? 'Choose separate branches. A branch cannot swap with its own descendant.' : 'Choose two different cards of the active type.'); pick(id); return;
+      feedback('error'); setNotice(level.mode === 'subtrees' ? 'Choose separate branches. A branch cannot swap with its own descendant.' : 'Choose two different cards of the active type.'); pick(id); return;
     }
     swapNodes(previous, id);
   }
   function swapNodes(a: string, b: string) {
     if (solved || sandbox || !canSwap(tree, a, b, level.mode)) return;
     setHistory(old => [...old, { tree, route }]);
-    setTree(swap(tree, a, b, level.mode)); setRoute(extendRoute(route, [a, b])); pick(null); setHinted(null); setNotice('');
+    const next = swap(tree, a, b, level.mode); feedback(accuracy(next, level.target) === 1 ? 'win' : 'swap');
+    setTree(next); setRoute(extendRoute(route, [a, b])); pick(null); setHinted(null); setNotice('');
   }
   function undo() {
     const last = history.at(-1); if (!last) return;
-    setTree(last.tree); setRoute(last.route); setHistory(history.slice(0, -1)); pick(null); setHinted(null); setNotice('');
+    feedback('undo'); setBurst(null); setTree(last.tree); setRoute(last.route); setHistory(history.slice(0, -1)); pick(null); setHinted(null); setNotice('');
   }
   function showHint() {
     const pair = hint(tree, level, route); if (!pair) return;
-    pick(null); setHinted(pair); setNotice('Try swapping the two highlighted cards. This follows a safe path back to the target.');
+    feedback('hint'); pick(null); setHinted(pair); setNotice('Try swapping the two highlighted cards. This follows a safe path back to the target.');
   }
   function edit(replacement: Tree) {
-    if (!selected) return;
-    setHistory(old => [...old, { tree, route }]); setTree(update(tree, selected, replacement)); setNotice('');
+    if (!selected || JSON.stringify(find(tree, selected)) === JSON.stringify(replacement)) return;
+    feedback('edit'); setHistory(old => [...old, { tree, route }]); setTree(update(tree, selected, replacement)); setNotice('');
   }
   function exportImage() {
     const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
     const ctx = canvas.getContext('2d')!;
     pixels(tree).forEach((color, i) => { ctx.fillStyle = palette[color].hex; ctx.fillRect((i % 8) * 64, Math.floor(i / 8) * 64, 64, 64); });
-    const anchor = document.createElement('a'); anchor.download = 'branch-and-bloom.png'; anchor.href = canvas.toDataURL(); anchor.click();
+    feedback('export'); const anchor = document.createElement('a'); anchor.download = 'branch-and-bloom.png'; anchor.href = canvas.toDataURL(); anchor.click();
   }
 
   return <div className="app-shell">
     <header className="site-header"><a className="brand" href="#" onClick={event => { event.preventDefault(); load(levelIndex); }} aria-label="Branch and Bloom home"><span className="brand-mark"><GitBranch size={23} /></span><span>branch<span className="brand-amp"> & </span>bloom<span className="brand-dot">.</span></span></a>
       <nav aria-label="Main navigation"><button className={!sandbox ? 'nav-active' : ''} onClick={() => sandbox ? load(levelIndex) : setModal('levels')}>The puzzles</button><button className={sandbox ? 'nav-active' : ''} onClick={() => { if (!sandbox) load(levelIndex, true); }}>Creative studio <span className="nav-badge">PLAY</span></button></nav>
+      <button className="sound-button" aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'} aria-pressed={soundEnabled} onClick={() => { const enabled = !soundEnabled; setSoundEnabled(enabled); saveSoundEnabled(enabled); if (enabled) { audio.current ??= createSoundPlayer(); audio.current.play('select'); } }}>{soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}</button>
       <button className="help-button" onClick={() => setModal('help')}><HelpCircle size={17} /><span>How to play</span></button>
     </header>
 
@@ -177,16 +208,17 @@ export default function App() {
             <section className="picture-panel" aria-label="Picture comparison">
               {!sandbox && <div className="picture-section"><div className="panel-label"><span><span className="tiny-dot target-dot" />THE TARGET</span><span>8 × 8</span></div><PixelPicture tree={level.target} label="Target pixel art to recreate" /><p className="picture-caption">A little inspiration.</p></div>}
               {!sandbox && <div className="picture-divider"><span /><ArrowDown size={15} /><span /></div>}
-              <div className="picture-section"><div className="panel-label"><span><span className="tiny-dot live-dot" />{sandbox ? 'YOUR CANVAS' : 'YOUR PICTURE'}</span><span className="live-label">LIVE</span></div><PixelPicture tree={tree} target={level.target} selected={selected} difference={!sandbox && difference} label={sandbox ? 'Your pixel art canvas' : `Your picture, ${Math.round(match * 100)} percent matching`} /><p className="picture-caption">{sandbox ? 'Every branch paints a possibility.' : solved ? 'Right where everything belongs.' : 'A work in progress.'}</p></div>
+              <div className="picture-section"><div className="panel-label"><span><span className="tiny-dot live-dot" />{sandbox ? 'YOUR CANVAS' : 'YOUR PICTURE'}</span><span className="live-label">LIVE</span></div><PixelPicture tree={tree} target={level.target} selected={sandbox ? null : selected} difference={!sandbox && difference} label={sandbox ? 'Your pixel art canvas' : `Your picture, ${Math.round(match * 100)} percent matching`} /><p className="picture-caption">{sandbox ? 'Every branch paints a possibility.' : solved ? 'Right where everything belongs.' : 'A work in progress.'}</p></div>
               {!sandbox && <label className="difference-toggle"><input type="checkbox" checked={difference} onChange={e => setDifference(e.target.checked)} /><span>Highlight mismatched pixels</span></label>}
               {sandbox && <button className="button secondary export-button" onClick={exportImage}><Download size={15} />Save picture</button>}
             </section>
 
             <section className="logic-panel" aria-label="Decision tree editor">
-              <div className="logic-toolbar"><div className="panel-label"><GitBranch size={15} /><span>YOUR DECISION TREE</span></div><span className="node-count">{nodes(tree).length} nodes <Maximize2 size={13} /></span></div>
+              {burst && <div key={burst.id} className={`feedback-burst feedback-${burst.kind}`} aria-hidden="true">{Array.from({ length: burst.kind === 'win' ? 16 : 6 }, (_, i) => <i key={i} style={{ '--angle': `${i * 137.5}deg`, '--distance': `${32 + i % 4 * 17}px`, '--delay': `${i % 4 * 25}ms` } as React.CSSProperties} />)}{burst.kind === 'win' && <span>Beautifully done!</span>}</div>}
+              <div className="logic-toolbar"><div className="panel-label"><GitBranch size={15} /><span>YOUR DECISION TREE</span></div><span className="node-count">{nodes(tree).length} nodes <button className="fit-button" aria-label={fitTree ? 'Show tree at actual size' : 'Fit whole tree'} aria-pressed={fitTree} onClick={() => setFitTree(!fitTree)}><Maximize2 size={13} />{fitTree ? '100%' : 'Fit'}</button></span></div>
               <div className="stats-row">{sandbox ? <><div><strong>{nodes(tree).filter(n => n.kind === 'split').length}</strong><span>decisions</span></div><div><strong>{nodes(tree).filter(n => n.kind === 'leaf').length}</strong><span>color leaves</span></div><div><strong>8 × 8</strong><span>possibilities</span></div></> : <><div className={solved ? 'stat-success' : ''}><strong>{Math.round(match * 100)}<small>%</small></strong><span>picture match</span></div><div><strong>{moves.toString().padStart(2, '0')}</strong><span>{moves === 1 ? 'swap made' : 'swaps made'}</span></div><div><strong>{level.par}<small>{level.par === 1 ? ' swap' : ' swaps'}</small></strong><span>three-star target</span></div></>}</div>
-              <div className={`tree-area ${solved ? 'tree-solved' : ''}`}><TreeView tree={tree} selected={selected} onSelect={selectNode} onSwap={swapNodes} level={level} sandbox={sandbox} hinted={hinted} />
-                {!sandbox && <div className="tree-legend"><span><GitBranch size={12} /> A question</span><span><span className="legend-square" /> A color</span><span>yes ← → no</span></div>}
+              <div className={`tree-area ${solved ? 'tree-solved' : ''}`}><TreeView tree={tree} selected={selected} onSelect={selectNode} onSwap={swapNodes} level={level} sandbox={sandbox} hinted={hinted} fit={fitTree} />
+                {!sandbox && <div className="tree-legend"><span><GitBranch size={12} /> A question</span><span><span className="legend-square" /> A color</span><span>yes ← → no</span><span className="pan-tip">Scroll sideways to explore</span></div>}
               </div>
 
               {sandbox ? <div className="studio-controls"><div className="studio-controls-title"><Scissors size={16} /><strong>{selectedNode ? selectedNode.kind === 'leaf' ? 'Make this region yours' : 'Edit this decision' : 'Select a card to start creating'}</strong></div><p>Questions use the full canvas coordinates, from 0 to 7.</p>
@@ -199,7 +231,7 @@ export default function App() {
                 {selectedNode?.kind === 'split' && <button className="text-button" onClick={() => edit({ id: selectedNode.id, kind: 'leaf', color: paint })}>Collapse branch to selected color</button>}<span className="studio-limit">Up to 31 nodes. Select a leaf to paint, or split it into two regions.</span>
               </div> : <div className={`instruction-card ${solved ? 'success-card' : ''}`} aria-live="polite">{solved ? <><span className="instruction-icon"><Check size={21} /></span><div><strong>{level.id === 12 ? 'A beautiful finish.' : 'Everything clicked.'}</strong><p>Picture restored in {moves} {moves === 1 ? 'swap' : 'swaps'}. <StarRow count={stars(moves, level.par)} /></p></div></> : <><span className="instruction-icon"><MousePointer2 size={19} /></span><div><strong>{selected ? 'Now pick its new home.' : level.mode === 'leaves' ? 'Two colors. One little swap.' : level.mode === 'rules' ? 'Right question, wrong place.' : 'A branch brings its whole world.'}</strong><p>{selected ? 'Tap another compatible card to swap. Tap the selected card to cancel.' : level.mode === 'leaves' ? 'Tap a color leaf, then tap another to swap their colors.' : level.mode === 'rules' ? 'Tap two question cards to swap their rules. Their children stay put.' : 'Tap two separate branches to swap them, including all their children.'}</p></div></>}</div>}
 
-              <div className="game-actions"><div><button className="icon-action" data-undo onClick={undo} disabled={!history.length} title="Undo (Ctrl or ⌘ Z)"><Undo2 size={16} /><span>Undo</span></button><button className="icon-action" onClick={() => load(levelIndex, sandbox)} disabled={!history.length && !selected && !hinted}><RotateCcw size={15} /><span>Reset</span></button></div>{sandbox ? <span className="studio-note"><Sprout size={15} /> Make something small & lovely.</span> : solved ? <button className="button primary" onClick={() => levelIndex < levels.length - 1 ? load(levelIndex + 1) : setModal('levels')}>{levelIndex < 11 ? 'Next puzzle' : 'See your journey'}<ArrowRight size={15} /></button> : <button className="hint-button" onClick={showHint}><Lightbulb size={16} />A little hint</button>}</div>
+              <div className="game-actions"><div><button className="icon-action" data-undo onClick={undo} disabled={!history.length} title="Undo (Ctrl or ⌘ Z)"><Undo2 size={16} /><span>Undo</span></button><button className="icon-action" onClick={() => load(levelIndex, sandbox, true)} disabled={!history.length && !selected && !hinted && (!sandbox || (tree.kind === 'leaf' && tree.color === 'sky'))}><RotateCcw size={15} /><span>Reset</span></button></div>{sandbox ? <span className="studio-note"><Sprout size={15} /> Make something small & lovely.</span> : solved ? <button className="button primary" onClick={() => levelIndex < levels.length - 1 ? load(levelIndex + 1) : setModal('levels')}>{levelIndex < 11 ? 'Next puzzle' : 'See your journey'}<ArrowRight size={15} /></button> : <button className="hint-button" onClick={showHint}><Lightbulb size={16} />A little hint</button>}</div>
               <div className="notice" role="status">{notice}</div>
             </section>
           </div>

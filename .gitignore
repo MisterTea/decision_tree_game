@@ -6,3 +6,5 @@ tmp/
 .env*
 playwright-report/
 test-results/
+coverage/
+qa/

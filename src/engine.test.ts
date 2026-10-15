@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { accuracy, canSwap, colorAt, extendRoute, hint, levels, nodes, stars, swap, update, visits } from './engine';
 
