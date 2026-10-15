@@ -17,6 +17,64 @@ const choose = (id: number) => {
 };
 beforeEach(() => { play.mockClear(); });
 
+describe('drag phantom', () => {
+  function setup() {
+    vi.stubGlobal('PointerEvent', class extends MouseEvent {
+      pointerId: number;
+      constructor(type: string, init: PointerEventInit = {}) { super(type, init); this.pointerId = init.pointerId ?? 1; }
+    });
+    render(<App />);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 200, width: 100, height: 44 } as DOMRect);
+    const getStyle = window.getComputedStyle;
+    vi.spyOn(window, 'getComputedStyle').mockImplementation(element => {
+      const style = getStyle(element); if (element.classList.contains('tree-node')) style.fontSize = '12px'; return style;
+    });
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
+  }
+  const phantom = () => document.querySelector('.drag-ghost');
+  const down = () => fireEvent.pointerDown(node('b'), { button: 0, clientX: 125, clientY: 215, pointerId: 1 });
+  const move = () => fireEvent.pointerMove(node('b'), { clientX: 175, clientY: 245, pointerId: 1 });
+  test('preserves the grab offset, leaves the source in place, and removes the phantom after a missed drop', () => {
+    setup(); fireEvent.pointerUp(node('b')); down(); expect(phantom()).toBeNull();
+    fireEvent.pointerMove(node('b'), { clientX: 127, clientY: 216, pointerId: 1 }); expect(phantom()).toBeNull();
+    fireEvent.pointerMove(node('b'), { clientX: 175, clientY: 245, pointerId: 2 }); expect(phantom()).toBeNull();
+    move();
+    expect(phantom()).toHaveTextContent('Peach');
+    expect(phantom()!.parentElement).toHaveAttribute('aria-hidden', 'true');
+    expect(phantom()!.parentElement!.parentElement).toBe(document.body);
+    expect(phantom()).toHaveStyle({ transform: 'translate3d(150px, 230px, 0)', width: '100px', height: '44px' });
+    expect(node('b')).toHaveTextContent('Peach');
+    fireEvent.pointerUp(node('b'), { pointerId: 2 }); expect(phantom()).not.toBeNull();
+    fireEvent.pointerUp(node('b'), { pointerId: 1, clientX: 175, clientY: 245 });
+    expect(phantom()).toBeNull(); fireEvent.click(node('b')); expect(node('b')).toHaveAttribute('aria-pressed', 'false');
+  });
+  test('drops through the phantom onto a compatible card without leaving a selection', () => {
+    setup(); down(); move();
+    vi.mocked(document.elementFromPoint).mockReturnValue(node('c'));
+    fireEvent.pointerUp(node('b'), { pointerId: 1, clientX: 175, clientY: 245 });
+    expect(phantom()).toBeNull(); expect(score()).toContain('100 percent');
+    fireEvent.click(node('b')); expect(node('b')).toHaveAttribute('aria-pressed', 'false');
+  });
+  test.each(['pointerCancel', 'lostPointerCapture', 'Escape', 'blur'])('clears the phantom on %s', cause => {
+    setup(); down(); move(); expect(phantom()).not.toBeNull();
+    if (cause === 'Escape') fireEvent.keyDown(document, { key: 'Escape' });
+    else if (cause === 'blur') fireEvent(window, new Event('blur'));
+    else if (cause === 'pointerCancel') fireEvent.pointerCancel(node('b'));
+    else fireEvent.lostPointerCapture(node('b'));
+    expect(phantom()).toBeNull();
+    fireEvent.pointerMove(node('b'), { clientX: 190, clientY: 260 }); expect(phantom()).toBeNull();
+  });
+  test('supports question cards and ignores right clicks and studio painting', () => {
+    setup(); choose(5);
+    fireEvent.pointerDown(node('a'), { button: 2 }); fireEvent.pointerMove(node('a'), { clientX: 150 }); expect(phantom()).toBeNull();
+    fireEvent.pointerDown(node('a'), { button: 0, clientX: 125, clientY: 215 });
+    fireEvent.pointerMove(node('a'), { clientX: 175, clientY: 245 });
+    expect(phantom()).toHaveTextContent(/y < 4/);
+    click(/Creative studio/); expect(phantom()).toBeNull();
+    fireEvent.pointerDown(node('root'), { button: 0 }); fireEvent.pointerMove(node('root'), { clientX: 150 }); expect(phantom()).toBeNull();
+  });
+});
+
 describe('campaign interactions', () => {
   test('selects and cancels, previews regions, marks differences, wins, undoes, resets, and saves stars', () => {
     render(<App />);

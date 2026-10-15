@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, HelpCircle, Layers, Leaf, Lightbulb, Maximize2, MousePointer2, Palette, RotateCcw, Sparkles, Sprout, Star, Undo2, X, Download, Scissors, Volume2, VolumeX } from 'lucide-react';
 import { accuracy, canSwap, extendRoute, find, hint, levels, nodes, palette, pixels, SIZE, stars, swap, update, visits } from './engine';
 import type { Color, Level, Move, Tree } from './engine';
@@ -68,8 +69,16 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fi
     setFocusId(tree.id);
   }, [level.id, sandbox, tree.id]);
   const scale = compact ? Math.min(1, viewportWidth / width, viewportHeight / height) : fit ? Math.min(1, viewportWidth / width) : 1;
-  const dragged = useRef<string | null>(null);
+  const dragged = useRef<{ id: string; pointer: number; startX: number; startY: number; offsetX: number; offsetY: number; width: number; height: number; fontSize: number; active: boolean } | null>(null);
+  const [ghost, setGhost] = useState<{ node: Tree; x: number; y: number; width: number; height: number; fontSize: number } | null>(null);
   const suppressClick = useRef(false);
+  const cancelDrag = () => { if (dragged.current?.active) suppressClick.current = true; dragged.current = null; setGhost(null); };
+  useEffect(() => { cancelDrag(); }, [tree, level.id, sandbox, focusId]);
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') cancelDrag(); };
+    document.addEventListener('keydown', escape); window.addEventListener('blur', cancelDrag);
+    return () => { document.removeEventListener('keydown', escape); window.removeEventListener('blur', cancelDrag); };
+  }, []);
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const available = (node: Tree) => sandbox || (level.mode === 'leaves' ? node.kind === 'leaf' : level.mode === 'rules' ? node.kind === 'split' : true);
   const jump = (id: string) => { setFocusId(id); onExplore(); };
@@ -94,21 +103,39 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fi
         className={`tree-node ${node.kind} ${selected === node.id ? 'selected' : ''} ${eligible ? '' : 'fixed'} ${validTarget ? 'swap-target' : ''} ${hinted?.includes(node.id) ? 'hinted' : ''}`}
         style={{ left: x, top: y }} aria-label={`Node ${node.id}: ${name}${!eligible ? ' (fixed)' : ''}`} aria-pressed={selected === node.id} disabled={!eligible}
         onClick={() => { if (suppressClick.current) { suppressClick.current = false; return; } onSelect(node.id); }}
-        onPointerDown={event => { suppressClick.current = false; if (!eligible || sandbox || event.button !== 0) return; dragged.current = node.id; event.currentTarget.setPointerCapture(event.pointerId); }}
+        onPointerDown={event => {
+          suppressClick.current = false; if (!eligible || sandbox || event.button !== 0) return;
+          const box = event.currentTarget.getBoundingClientRect();
+          const ratio = box.width / (event.currentTarget.offsetWidth || box.width || 1);
+          dragged.current = { id: node.id, pointer: event.pointerId, startX: event.clientX, startY: event.clientY, offsetX: event.clientX - box.left, offsetY: event.clientY - box.top, width: box.width, height: box.height, fontSize: parseFloat(getComputedStyle(event.currentTarget).fontSize) * ratio, active: false };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={event => {
+          const drag = dragged.current;
+          if (!drag || drag.pointer !== event.pointerId) return;
+          if (!drag.active && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 4) return;
+          drag.active = true;
+          setGhost({ node, x: event.clientX - drag.offsetX, y: event.clientY - drag.offsetY, width: drag.width, height: drag.height, fontSize: drag.fontSize });
+        }}
         onPointerUp={event => {
-          const source = dragged.current; dragged.current = null;
+          if (dragged.current && dragged.current.pointer !== event.pointerId) return;
+          const drag = dragged.current, source = drag?.id; cancelDrag();
           if (!source || sandbox) return;
           const hit = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLButtonElement>('.tree-node');
           const destination = hit ? Object.keys(buttonRefs.current).find(id => buttonRefs.current[id] === hit) : undefined;
           if (destination && destination !== source && canSwap(tree, source, destination, level.mode)) { suppressClick.current = true; onSwap(source, destination); }
         }}
-        onPointerCancel={() => { dragged.current = null; }}>
+        onPointerCancel={cancelDrag} onLostPointerCapture={cancelDrag}>
         {node.kind === 'leaf' ? <><span className="node-swatch" style={{ background: palette[node.color].hex }} /><span>{palette[node.color].label}</span></> : <><GitBranch size={15} /><span>{node.rule.axis} <b>&lt;</b> {node.rule.value}</span></>}
         {selected === node.id && <span className="picked-label">SELECTED</span>}
       </button>;
     })}
     {focused && focus.kind === 'split' && [focus.yes, focus.no].map((child, i) => child.kind === 'split' && <button key={`explore-${child.id}`} className="open-branch" style={{ left: horizontal ? 320 : i === 0 ? 66 : 202, top: horizontal ? i === 0 ? 13 : 69 : 128 }} aria-label={`Open ${i === 0 ? 'yes' : 'no'} branch`} onClick={() => jump(child.id)}>Open branch <ChevronDown size={11} /></button>)}
-  </div></div></div></div>;
+  </div></div></div>
+    {ghost && createPortal(<div className="drag-layer" aria-hidden="true"><div className="drag-ghost" style={{ width: ghost.width, height: ghost.height, fontSize: ghost.fontSize, transform: `translate3d(${ghost.x}px, ${ghost.y}px, 0)` }}>
+      {ghost.node.kind === 'leaf' ? <><span className="node-swatch" style={{ background: palette[ghost.node.color].hex }} /><span>{palette[ghost.node.color].label}</span></> : <><GitBranch size="1.25em" /><span>{ghost.node.rule.axis} &lt; {ghost.node.rule.value}</span></>}
+    </div></div>, document.body)}
+  </div>;
 }
 
 export default function App() {

@@ -84,17 +84,39 @@ test('drag swaps nodes without leaving a stale selection', async ({ page, contex
   await page.getByRole('button', { name: 'Node b: Peach color', exact: true }).scrollIntoViewIfNeeded();
   const source = await page.getByRole('button', { name: 'Node b: Peach color', exact: true }).boundingBox();
   const target = await page.getByRole('button', { name: 'Node c: Sky color', exact: true }).boundingBox();
+  async function inspectPhantom() {
+    const phantom = page.locator('.drag-ghost');
+    await expect(phantom).toBeVisible(); await expect(phantom).toHaveText('Peach');
+    await expect(phantom).toHaveCSS('pointer-events', 'none');
+    const box = (await phantom.boundingBox())!;
+    expect(box.x).toBeCloseTo((source!.x + target!.x) / 2, 0);
+    expect(box.width).toBeCloseTo(source!.width, 0); expect(box.height).toBeCloseTo(source!.height, 0);
+    const original = (await page.getByRole('button', { name: 'Node b: Peach color', exact: true }).boundingBox())!;
+    expect(original.x).toBeCloseTo(source!.x, 0); expect(original.y).toBeCloseTo(source!.y, 0);
+    await page.screenshot({ path: test.info().outputPath('drag-phantom.png') });
+    await page.waitForTimeout(400);
+  }
   if (test.info().project.name === 'mobile') {
     const client = await context.newCDPSession(page);
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: source!.x + source!.width / 2, y: source!.y + source!.height / 2 }] });
-    for (let step = 1; step <= 12; step++) await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: source!.x + source!.width / 2 + (target!.x - source!.x) * step / 12, y: target!.y + target!.height / 2 }] });
+    await expect(page.locator('.drag-ghost')).toHaveCount(0);
+    for (let step = 1; step <= 12; step++) {
+      await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: source!.x + source!.width / 2 + (target!.x - source!.x) * step / 12, y: target!.y + target!.height / 2 }] });
+      if (step === 6) {
+        await inspectPhantom();
+      }
+    }
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   } else {
     await page.mouse.move(source!.x + source!.width / 2, source!.y + source!.height / 2); await page.mouse.down();
+    await expect(page.locator('.drag-ghost')).toHaveCount(0);
+    await page.mouse.move((source!.x + target!.x) / 2 + source!.width / 2, source!.y + source!.height / 2, { steps: 6 });
+    await inspectPhantom();
     await page.mouse.move(target!.x + target!.width / 2, target!.y + target!.height / 2, { steps: 12 }); await page.mouse.up();
   }
   await expect(page.getByText('Everything clicked.')).toBeVisible();
   await expect(page.locator('.tree-node.selected')).toHaveCount(0);
+  await expect(page.locator('.drag-ghost')).toHaveCount(0);
 });
 
 test('plays the entire campaign without hints and keeps target previews available', async ({ page }) => {

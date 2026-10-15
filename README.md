@@ -14,7 +14,7 @@ The 12-puzzle campaign introduces three mechanics:
 - **A twist of logic:** swap decision rules while their children stay put.
 - **Room to grow:** swap whole subtrees, including their descendants. Separate branches can have different sizes, so the topology can change. Ancestor/descendant swaps are forbidden.
 
-Click or tap two compatible cards, or drag one onto another. Keyboard players can use Tab and Enter. Undo, reset, hints, live pixel previews, and optional mismatch markers help you explore without a timer or hard move limit. Match the picture within the swap target for three stars. Your best completed scores are stored locally in this browser; storage is optional and no account is required.
+Click or tap two compatible cards, or drag one onto another. While dragging, a translucent copy follows your mouse or finger; the original stays in place until the drop. Keyboard players can use Tab and Enter. Undo, reset, hints, live pixel previews, and optional mismatch markers help you explore without a timer or hard move limit. Match the picture within the swap target for three stars. Your best completed scores are stored locally in this browser; storage is optional and no account is required.
 
 The **Creative studio** lets you split regions, edit rules, paint leaves, collapse branches, and download your art as a PNG. Your draft survives switching between the campaign and studio during a session. Reloading or resetting clears the draft, so export art you want to keep. Trees are limited to 31 nodes to keep the editor manageable.
 

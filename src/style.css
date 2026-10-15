@@ -15,6 +15,9 @@
 
 /* Feedback stays inside the game and never intercepts input. */
 .sound-button{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;border:1px solid #d5dacc;border-radius:7px;color:#62764f;margin-left:-25px}
+.drag-layer{position:fixed;inset:0;z-index:1000;overflow:clip;pointer-events:none}
+.drag-ghost{position:absolute;left:0;top:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;border:1px solid #879f69;border-radius:8px;background:#f8fbf1;color:#30483b;box-shadow:0 8px 20px #30483b30;opacity:.72;pointer-events:none;user-select:none;will-change:transform;font-family:'DM Sans',sans-serif;font-weight:500}
+.drag-ghost .node-swatch{width:1.4em;height:1.4em;flex-shrink:0}
 .logic-panel{position:relative}
 .feedback-burst{pointer-events:none;position:absolute;left:50%;top:48%;z-index:5;width:1px;height:1px}
 .feedback-burst i{position:absolute;width:7px;height:7px;border-radius:2px;background:#d4ab5e;opacity:0;animation:particle-pop .7s ease-out var(--delay) both;transform:rotate(var(--angle))}

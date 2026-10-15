@@ -7,3 +7,4 @@ Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: 
 Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value() { this.removeAttribute('open'); } });
 Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value() {} });
 Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { configurable: true, value() {} });
+Object.defineProperty(document, 'elementFromPoint', { configurable: true, value() { return null; } });
