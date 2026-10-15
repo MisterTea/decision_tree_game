@@ -22,6 +22,12 @@ test('first puzzle supports input, undo, reset, score, and persistent progress',
   await expect(page.getByText('Everything clicked.')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Your picture, 100 percent matching', exact: true })).toBeVisible();
   await expect(page.locator('.success-card .stars')).toHaveAttribute('aria-label', '3 of 3 stars');
+  await expect(page.locator('.tree-area')).toBeHidden();
+  await page.getByRole('button', { name: 'Show puzzle again', exact: true }).click();
+  await expect(page.locator('.tree-area')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Your picture, 100 percent matching', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Hide puzzle', exact: true }).click();
+  await expect(page.locator('.tree-area')).toBeHidden();
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.getByText('Everything clicked.')).not.toBeVisible();
   await tapOrClick(page, 'Node b: Peach color');

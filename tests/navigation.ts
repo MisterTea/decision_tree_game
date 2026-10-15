@@ -21,7 +21,8 @@ export async function expectNoPlayScroll(page: Page) {
   expect(geometry.scrollWidth, 'Page must fit horizontally').toBeLessThanOrEqual(geometry.width + 1);
   expect(geometry.scrollHeight, 'Page must fit vertically').toBeLessThanOrEqual(geometry.height + 1);
   expect(geometry.x).toBe(0); expect(geometry.y).toBe(0);
-  for (const selector of ['.picture-panel', '.logic-toolbar', '.game-actions', '.tree-scroll', '.puzzle-header', '.puzzle-navigation']) {
+  const showingCompletion = await page.locator('.completion-panel').isVisible();
+  for (const selector of ['.picture-panel', '.logic-toolbar', '.game-actions', showingCompletion ? '.completion-panel' : '.tree-scroll', '.puzzle-header', '.puzzle-navigation']) {
     if ((selector === '.puzzle-navigation' || selector === '.logic-toolbar' || selector === '.puzzle-header') && !(await page.locator(selector).isVisible())) continue;
     const box = await page.locator(selector).boundingBox();
     expect(box, `${selector} must remain visible`).not.toBeNull();
@@ -33,7 +34,7 @@ export async function expectNoPlayScroll(page: Page) {
       expect(box!.y + box!.height, `${selector} must fit inside the board`).toBeLessThanOrEqual(board!.y + board!.height + 1);
     }
   }
-  const clipping = await page.locator('.tree-scroll').evaluate(container => {
+  const clipping = showingCompletion ? [] : await page.locator('.tree-scroll').evaluate(container => {
     const bounds = container.getBoundingClientRect();
     return [...container.querySelectorAll('.tree-node')].filter(node => {
       const box = node.getBoundingClientRect();
@@ -49,7 +50,7 @@ export async function expectNoPlayScroll(page: Page) {
     }).map(control => control.getAttribute('aria-label') || control.textContent);
   });
   expect(clippedControls, 'All play controls and previews must fit inside the board').toEqual([]);
-  if (await page.locator('.branch-view').count()) {
+  if (!showingCompletion && await page.locator('.branch-view').count()) {
     for (const card of await page.locator('.tree-node').all()) {
       const box = await card.boundingBox();
       expect(box!.height, 'Branch cards must remain readable and tappable').toBeGreaterThanOrEqual(36);

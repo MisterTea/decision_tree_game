@@ -2,15 +2,15 @@
 
 ## Coverage
 
-The unit/component suite has 71 passing tests, including all 12 puzzles, legal and illegal swaps, hint recovery, scoring, React interactions, progress/storage failures, studio edits, exports, and sound scheduling/resource cleanup.
+The unit/component suite has 72 passing tests, including all 12 puzzles, legal and illegal swaps, hint recovery, scoring, React interactions, progress/storage failures, studio edits, exports, and sound scheduling/resource cleanup.
 
 Coverage includes **every production TypeScript/TSX source file**, including the React app, engine, audio, and bootstrap. Only tests and test setup are excluded. The baseline was 26.86% statements across the whole app, despite high engine coverage.
 
 | Metric | Final coverage |
 | --- | ---: |
-| Statements | 98.29% |
-| Branches | 97.52% |
-| Functions | 99.22% |
+| Statements | 98.32% |
+| Branches | 97.56% |
+| Functions | 99.24% |
 | Lines | 100% |
 
 Each source file must individually meet an 81% floor in all four metrics. CI runs `npm run test:coverage`, and a coverage regression fails the deployment.
@@ -19,7 +19,7 @@ Each source file must individually meet an 81% floor in all four metrics. CI run
 
 There are 27 end-to-end scenarios: nine cases each in desktop and mobile Chromium, including touch input emulation. The normal viewports are 1440×1000 and 390×844; narrow-layout cases use 320×720. Nine more viewport-specific scenarios play the entire campaign and use the studio: 320×480, 320×568, 360×640, 375×667, 390×844, 412×915, 568×320, 667×375, and 844×390. These use touch input and branch buttons without page or tree scrolling. Every move checks document dimensions, card bounds and minimum size, and every visible control/preview against the board edges. Each video uses its viewport dimensions. The 320×480 case also covers a reduced visible area caused by browser controls.
 
-1. First-puzzle play, selection/cancel, win, undo/reset, scoring, and saved progress.
+1. First-puzzle play, selection/cancel, win, completion hides the tree, review/hide controls, undo/reset, scoring, and saved progress. Phone-size runs also reveal/hide the solved tree on the first and final puzzles and check both views for overflow. Keyboard focus moves to the next puzzle on completion and to the hide control during review.
 2. Every campaign puzzle solved with hints through the interface.
 3. Every campaign puzzle solved without hints, checking three-star solutions and visible mobile previews.
 4. Mouse drag and actual Chromium touch-drag input, with a pointer-following phantom, matching displayed card size, an unmoved source, and cleanup after the drop. Unit tests also cover missed drops, Escape, pointer cancellation, lost capture, and window blur.
@@ -37,6 +37,7 @@ Open `qa/final/index.html` after a local run. Each scenario has its own `video.m
 
 | Observed issue | Change and verification |
 | --- | --- |
+| The solved tree still looks playable after a win. | Replace it with an explicit Puzzle complete panel and stars. Show puzzle again reveals the solved tree without changing the score; Hide puzzle returns to the result. Undo, Reset, and the next puzzle clear the review state. |
 | Dragging has no moving visual feedback. | A translucent copy preserves the grab offset and follows the pointer outside the tree frame. It ignores hit testing, stays out of the accessibility tree, and clears on drop or cancellation. A viewport overlay prevents edge drags from adding scrollbars. |
 | Mobile players lose sight of target art while editing deep trees. | A viewport-sized play surface retains previews and actions throughout the campaign. |
 | A large tree is difficult to use without scrolling on a phone. | Readable branch explorer with Open/Up/Root controls, a path selector, and an optional whole-tree overview. Selection survives branch navigation. |

@@ -37,6 +37,13 @@ test('entire campaign and studio fit the screen without scrolling', async ({ pag
       tree = swap(tree, a, b, level.mode);
     }
     await expect(page.locator('.success-card')).toBeVisible();
+    await expect(page.locator('.tree-area')).toBeHidden();
+    if (level.id === 1 || level.id === 12) {
+      await page.getByRole('button', { name: 'Show puzzle again', exact: true }).tap();
+      await expect(page.locator('.tree-area')).toBeVisible(); await expectNoPlayScroll(page);
+      await page.getByRole('button', { name: 'Hide puzzle', exact: true }).tap();
+      await expect(page.locator('.tree-area')).toBeHidden(); await expectNoPlayScroll(page);
+    }
     if (level.id === 1 || level.id === 12) await page.screenshot({ path: test.info().outputPath(`level-${level.id}.png`) });
     if (level.id < 12) await page.locator('.game-actions').getByRole('button', { name: 'Next puzzle', exact: true }).tap();
   }

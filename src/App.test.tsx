@@ -53,6 +53,7 @@ describe('drag phantom', () => {
     vi.mocked(document.elementFromPoint).mockReturnValue(node('c'));
     fireEvent.pointerUp(node('b'), { pointerId: 1, clientX: 175, clientY: 245 });
     expect(phantom()).toBeNull(); expect(score()).toContain('100 percent');
+    click('Show puzzle again');
     fireEvent.click(node('b')); expect(node('b')).toHaveAttribute('aria-pressed', 'false');
   });
   test.each(['pointerCancel', 'lostPointerCapture', 'Escape', 'blur'])('clears the phantom on %s', cause => {
@@ -91,6 +92,7 @@ describe('campaign interactions', () => {
     expect(document.querySelector('.feedback-win')).not.toBeNull();
     expect(play).toHaveBeenCalledWith('win', true);
     expect(JSON.parse(localStorage.getItem('branch-bloom-progress-v1')!)).toEqual({ '1': 1 });
+    click('Show puzzle again');
     fireEvent.click(node('b')); expect(score()).toContain('100 percent');
     fireEvent.keyDown(document, { key: 'z', ctrlKey: true }); expect(score()).toContain('0 percent');
     fireEvent.click(node('b')); fireEvent.keyDown(document, { key: 'Escape' });
@@ -135,6 +137,27 @@ describe('campaign interactions', () => {
     click('Reset');
     expect(score()).not.toContain('100 percent');
   });
+});
+
+test('solving hides the tree, review can be toggled, and undo or replay starts a fresh completion view', () => {
+  render(<App />); swap('b', 'c');
+  expect(document.querySelector('.tree-area')).not.toBeVisible();
+  expect(document.querySelector('.logic-toolbar')).not.toBeVisible();
+  expect(screen.getByText('PUZZLE COMPLETE')).toBeVisible();
+  expect(within(document.querySelector('.game-actions') as HTMLElement).getByRole('button', { name: 'Next puzzle' })).toHaveFocus();
+  click('Show puzzle again');
+  expect(document.querySelector('.tree-area')).toBeVisible(); expect(button('Hide puzzle')).toHaveFocus();
+  expect(document.querySelector('.completion-panel')).toBeNull(); expect(score()).toContain('100 percent');
+  fireEvent.click(node('b')); expect(node('b')).toHaveAttribute('aria-pressed', 'false');
+  click('Hide puzzle'); expect(document.querySelector('.tree-area')).not.toBeVisible();
+  click('Show puzzle again'); click('Undo');
+  expect(document.querySelector('.tree-area')).toBeVisible(); expect(screen.queryByText('Show puzzle again')).toBeNull();
+  swap('b', 'c'); expect(document.querySelector('.tree-area')).not.toBeVisible();
+  click('Show puzzle again'); click('Reset'); swap('b', 'c');
+  expect(document.querySelector('.tree-area')).not.toBeVisible();
+  fireEvent.click(within(document.querySelector('.game-actions') as HTMLElement).getByRole('button', { name: 'Next puzzle' }));
+  expect(document.querySelector('.tree-area')).toBeVisible(); expect(document.querySelector('.completion-panel')).toBeNull();
+  click(/Creative studio/); expect(document.querySelector('.tree-area')).toBeVisible();
 });
 
 describe('storage and dialogs', () => {
@@ -230,6 +253,7 @@ describe('phone tree navigation', () => {
     click('Go to parent branch'); click('Open no branch');
     expect(screen.getByText('Peach selected')).toBeVisible();
     fireEvent.click(node('g')); expect(score()).toContain('100 percent');
+    click('Show puzzle again');
     click('Go to tree root'); expect(screen.getByRole('combobox', { name: 'Explore tree' })).toHaveValue('a');
   });
   test('jumps to leaves, returns to their parent, and switches between overview and readable branches', () => {

@@ -19,6 +19,14 @@
 .drag-ghost{position:absolute;left:0;top:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;border:1px solid #879f69;border-radius:8px;background:#f8fbf1;color:#30483b;box-shadow:0 8px 20px #30483b30;opacity:.72;pointer-events:none;user-select:none;will-change:transform;font-family:'DM Sans',sans-serif;font-weight:500}
 .drag-ghost .node-swatch{width:1.4em;height:1.4em;flex-shrink:0}
 .logic-panel{position:relative}
+.tree-area[hidden],.logic-toolbar[hidden]{display:none!important}
+.completion-panel{flex:1;min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;margin:14px 0;padding:26px;border:1px solid #c8dab3;border-radius:12px;text-align:center}
+.completion-icon{display:flex;align-items:center;gap:7px;color:#597e3b;font-size:10px;font-weight:700;letter-spacing:1.3px}
+.completion-panel h3{margin:0;font:700 25px/1.25 Manrope,sans-serif;letter-spacing:-.7px;color:#3b613e}
+.completion-panel p{margin:0;font-size:12px;color:#617853}
+.completion-panel .stars svg{width:23px;height:23px}
+.review-toggle{min-height:30px;margin:0;padding:2px 6px;font-size:11px}
+.logic-panel:has(.completion-panel) .feedback-burst>span{display:none}
 .feedback-burst{pointer-events:none;position:absolute;left:50%;top:48%;z-index:5;width:1px;height:1px}
 .feedback-burst i{position:absolute;width:7px;height:7px;border-radius:2px;background:#d4ab5e;opacity:0;animation:particle-pop .7s ease-out var(--delay) both;transform:rotate(var(--angle))}
 .feedback-burst i:nth-child(3n){background:#8cae72;border-radius:50%}.feedback-burst i:nth-child(3n+1){background:#de9a82}.feedback-burst i:nth-child(4n){background:#aaa1c4}

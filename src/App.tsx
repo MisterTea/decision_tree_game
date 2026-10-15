@@ -152,6 +152,7 @@ export default function App() {
   const [sandbox, setSandbox] = useState(false);
   const [difference, setDifference] = useState(false);
   const [fitTree, setFitTree] = useState(false);
+  const [reviewSolved, setReviewSolved] = useState(false);
   const [hinted, setHinted] = useState<Move | null>(null);
   const [notice, setNotice] = useState('');
   const [axis, setAxis] = useState<'x' | 'y'>('x');
@@ -169,9 +170,14 @@ export default function App() {
   useEffect(() => () => audio.current?.close(), []);
   const pick = (id: string | null) => { selectedRef.current = id; setSelected(id); };
   const match = accuracy(tree, level.target), solved = !sandbox && match === 1;
+  const showCompletion = solved && !reviewSolved;
   const moves = history.length;
   const completed = Object.keys(progress).length;
   const selectedNode = selected ? find(tree, selected) : undefined;
+
+  useEffect(() => {
+    if (solved) document.querySelector<HTMLButtonElement>(reviewSolved ? '.review-toggle' : '.game-actions .primary')?.focus({ preventScroll: true });
+  }, [solved, reviewSolved]);
 
   useEffect(() => {
     if (!solved) return;
@@ -195,7 +201,7 @@ export default function App() {
 
   function load(index: number, creative = false, reset = false) {
     if (sandbox) studioDraft.current = tree;
-    feedback('navigate'); setBurst(null);
+    feedback('navigate'); setBurst(null); setReviewSolved(false);
     setLevelIndex(index); setSandbox(creative); setTree(creative ? (!reset && studioDraft.current) || { id: 'root', kind: 'leaf', color: 'sky' } : levels[index].initial);
     setRoute(creative ? [] : levels[index].scramble); setHistory([]); pick(null); setHinted(null); setNotice(''); setDifference(false); setModal(null);
   }
@@ -217,12 +223,13 @@ export default function App() {
   function swapNodes(a: string, b: string) {
     if (solved || sandbox || !canSwap(tree, a, b, level.mode)) return;
     setHistory(old => [...old, { tree, route }]);
+    setReviewSolved(false);
     const next = swap(tree, a, b, level.mode); feedback(accuracy(next, level.target) === 1 ? 'win' : 'swap');
     setTree(next); setRoute(extendRoute(route, [a, b])); pick(null); setHinted(null); setNotice('');
   }
   function undo() {
     const last = history.at(-1); if (!last) return;
-    feedback('undo'); setBurst(null); setTree(last.tree); setRoute(last.route); setHistory(history.slice(0, -1)); pick(null); setHinted(null); setNotice('');
+    feedback('undo'); setBurst(null); setReviewSolved(false); setTree(last.tree); setRoute(last.route); setHistory(history.slice(0, -1)); pick(null); setHinted(null); setNotice('');
   }
   function showHint() {
     const pair = hint(tree, level, route); if (!pair) return;
@@ -269,9 +276,10 @@ export default function App() {
 
             <section className="logic-panel" aria-label="Decision tree editor">
               {burst && <div key={burst.id} className={`feedback-burst feedback-${burst.kind}`} aria-hidden="true">{Array.from({ length: burst.kind === 'win' ? 16 : 6 }, (_, i) => <i key={i} style={{ '--angle': `${i * 137.5}deg`, '--distance': `${32 + i % 4 * 17}px`, '--delay': `${i % 4 * 25}ms` } as React.CSSProperties} />)}{burst.kind === 'win' && <span>Beautifully done!</span>}</div>}
-              <div className="logic-toolbar"><div className="panel-label"><GitBranch size={15} /><span>YOUR DECISION TREE</span></div><span className="node-count">{nodes(tree).length} nodes <button className="fit-button" aria-label={fitTree ? 'Show tree at actual size' : 'Fit whole tree'} aria-pressed={fitTree} onClick={() => setFitTree(!fitTree)}><Maximize2 size={13} />{compact ? fitTree ? 'Branches' : 'Overview' : fitTree ? '100%' : 'Fit'}</button></span></div>
+              <div className="logic-toolbar" hidden={showCompletion}>{solved ? <button className="review-toggle text-button" onClick={() => setReviewSolved(false)}>Hide puzzle</button> : <div className="panel-label"><GitBranch size={15} /><span>YOUR DECISION TREE</span></div>}<span className="node-count">{nodes(tree).length} nodes <button className="fit-button" aria-label={fitTree ? 'Show tree at actual size' : 'Fit whole tree'} aria-pressed={fitTree} onClick={() => setFitTree(!fitTree)}><Maximize2 size={13} />{compact ? fitTree ? 'Branches' : 'Overview' : fitTree ? '100%' : 'Fit'}</button></span></div>
               <div className="stats-row">{sandbox ? <><div><strong>{nodes(tree).filter(n => n.kind === 'split').length}</strong><span>decisions</span></div><div><strong>{nodes(tree).filter(n => n.kind === 'leaf').length}</strong><span>color leaves</span></div><div><strong>8 × 8</strong><span>possibilities</span></div></> : <><div className={solved ? 'stat-success' : ''}><strong>{Math.round(match * 100)}<small>%</small></strong><span>picture match</span></div><div><strong>{moves.toString().padStart(2, '0')}</strong><span>{moves === 1 ? 'swap made' : 'swaps made'}</span></div><div><strong>{level.par}<small>{level.par === 1 ? ' swap' : ' swaps'}</small></strong><span>three-star target</span></div></>}</div>
-              <div className={`tree-area ${solved ? 'tree-solved' : ''}`}><TreeView tree={tree} selected={selected} onSelect={selectNode} onSwap={swapNodes} level={level} sandbox={sandbox} hinted={hinted} fit={fitTree} compact={compact} onExplore={() => setFitTree(false)} />
+              {showCompletion && <div className="completion-panel success-card" aria-live="polite"><span className="completion-icon"><Check size={18} />PUZZLE COMPLETE</span><h3>{level.id === 12 ? 'A beautiful finish.' : 'Everything clicked.'}</h3><p>Picture restored in {moves} {moves === 1 ? 'swap' : 'swaps'}.</p><StarRow count={stars(moves, level.par)} /><button className="button secondary" onClick={() => setReviewSolved(true)}>Show puzzle again</button></div>}
+              <div className={`tree-area ${solved ? 'tree-solved' : ''}`} hidden={showCompletion}>{!showCompletion && <TreeView tree={tree} selected={selected} onSelect={selectNode} onSwap={swapNodes} level={level} sandbox={sandbox} hinted={hinted} fit={fitTree} compact={compact} onExplore={() => setFitTree(false)} />}
                 {!sandbox && <div className="tree-legend"><span><GitBranch size={12} /> A question</span><span><span className="legend-square" /> A color</span><span>yes ← → no</span><span className="pan-tip">{compact ? 'Open a branch to explore' : 'Scroll sideways to explore'}</span></div>}
               </div>
 
@@ -283,7 +291,7 @@ export default function App() {
                   else { const uid = crypto.randomUUID(); edit({ id: selectedNode.id, kind: 'split', rule: { axis, value: threshold }, yes: { ...selectedNode, id: `${uid}-yes` }, no: { id: `${uid}-no`, kind: 'leaf', color: paint } }); }
                 }}>{selectedNode?.kind === 'split' ? 'Update rule' : 'Split region'}</button></div>
                 {selectedNode?.kind === 'split' && <button className="text-button" onClick={() => edit({ id: selectedNode.id, kind: 'leaf', color: paint })}>Collapse branch to selected color</button>}<span className="studio-limit">Up to 31 nodes. Select a leaf to paint, or split it into two regions.</span>
-              </div> : <div className={`instruction-card ${solved ? 'success-card' : ''}`} aria-live="polite">{solved ? <><span className="instruction-icon"><Check size={21} /></span><div><strong>{level.id === 12 ? 'A beautiful finish.' : 'Everything clicked.'}</strong><p>Picture restored in {moves} {moves === 1 ? 'swap' : 'swaps'}. <StarRow count={stars(moves, level.par)} /></p></div></> : <><span className="instruction-icon"><MousePointer2 size={19} /></span><div><strong>{selected ? compact && selectedNode ? `${selectedNode.kind === 'leaf' ? palette[selectedNode.color].label : `${selectedNode.rule.axis} < ${selectedNode.rule.value}`} selected` : 'Now pick its new home.' : level.mode === 'leaves' ? 'Two colors. One little swap.' : level.mode === 'rules' ? 'Right question, wrong place.' : 'A branch brings its whole world.'}</strong><p>{selected ? compact ? 'Explore another branch to find its swap. Tap again to cancel.' : 'Tap another compatible card to swap. Tap the selected card to cancel.' : level.mode === 'leaves' ? 'Tap a color leaf, then tap another to swap their colors.' : level.mode === 'rules' ? 'Tap two question cards to swap their rules. Their children stay put.' : 'Tap two separate branches to swap them, including all their children.'}</p></div></>}</div>}
+              </div> : !solved && <div className="instruction-card" aria-live="polite"><><span className="instruction-icon"><MousePointer2 size={19} /></span><div><strong>{selected ? compact && selectedNode ? `${selectedNode.kind === 'leaf' ? palette[selectedNode.color].label : `${selectedNode.rule.axis} < ${selectedNode.rule.value}`} selected` : 'Now pick its new home.' : level.mode === 'leaves' ? 'Two colors. One little swap.' : level.mode === 'rules' ? 'Right question, wrong place.' : 'A branch brings its whole world.'}</strong><p>{selected ? compact ? 'Explore another branch to find its swap. Tap again to cancel.' : 'Tap another compatible card to swap. Tap the selected card to cancel.' : level.mode === 'leaves' ? 'Tap a color leaf, then tap another to swap their colors.' : level.mode === 'rules' ? 'Tap two question cards to swap their rules. Their children stay put.' : 'Tap two separate branches to swap them, including all their children.'}</p></div></></div>}
 
               <div className="game-actions"><div><button className="icon-action" data-undo onClick={undo} disabled={!history.length} title="Undo (Ctrl or ⌘ Z)"><Undo2 size={16} /><span>Undo</span></button><button className="icon-action" onClick={() => load(levelIndex, sandbox, true)} disabled={!history.length && !selected && !hinted && (!sandbox || (tree.kind === 'leaf' && tree.color === 'sky'))}><RotateCcw size={15} /><span>Reset</span></button></div>{sandbox ? <span className="studio-note"><Sprout size={15} /> Make something small & lovely.</span> : solved ? <button className="button primary" onClick={() => levelIndex < levels.length - 1 ? load(levelIndex + 1) : setModal('levels')}>{levelIndex < 11 ? 'Next puzzle' : 'See your journey'}<ArrowRight size={15} /></button> : <button className="hint-button" onClick={showHint}><Lightbulb size={16} />A little hint</button>}</div>
               <div className="notice" role="status">{notice}</div>
