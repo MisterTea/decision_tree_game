@@ -2,22 +2,22 @@
 
 ## Coverage
 
-The unit/component suite has 58 passing tests, including all 12 puzzles, legal and illegal swaps, hint recovery, scoring, React interactions, progress/storage failures, studio edits, exports, and sound scheduling/resource cleanup.
+The unit/component suite has 64 passing tests, including all 12 puzzles, legal and illegal swaps, hint recovery, scoring, React interactions, progress/storage failures, studio edits, exports, and sound scheduling/resource cleanup.
 
 Coverage includes **every production TypeScript/TSX source file**, including the React app, engine, audio, and bootstrap. Only tests and test setup are excluded. The baseline was 26.86% statements across the whole app, despite high engine coverage.
 
 | Metric | Final coverage |
 | --- | ---: |
-| Statements | 93.19% |
-| Branches | 93.11% |
-| Functions | 94.49% |
-| Lines | 96.29% |
+| Statements | 94.09% |
+| Branches | 94.46% |
+| Functions | 95.96% |
+| Lines | 97.15% |
 
 Each source file must individually meet an 81% floor in all four metrics. CI runs `npm run test:coverage`, and a coverage regression fails the deployment.
 
 ## Recorded browser tests
 
-There are 18 passing end-to-end scenarios: nine cases each in desktop and mobile Chromium, including touch input emulation. The normal viewports are 1440×1000 and 390×844; narrow-layout cases use 320×720.
+There are 27 end-to-end scenarios: nine cases each in desktop and mobile Chromium, including touch input emulation. The normal viewports are 1440×1000 and 390×844; narrow-layout cases use 320×720. Nine more viewport-specific scenarios play the entire campaign and use the studio: 320×480, 320×568, 360×640, 375×667, 390×844, 412×915, 568×320, 667×375, and 844×390. These use touch input and branch buttons without page or tree scrolling. Every move checks document dimensions, card bounds and minimum size, and every visible control/preview against the board edges. Each video uses its viewport dimensions. The 320×480 case also covers a reduced visible area caused by browser controls.
 
 1. First-puzzle play, selection/cancel, win, undo/reset, scoring, and saved progress.
 2. Every campaign puzzle solved with hints through the interface.
@@ -37,8 +37,11 @@ Open `qa/final/index.html` after a local run. Each scenario has its own `video.m
 
 | Observed issue | Change and verification |
 | --- | --- |
-| Mobile players lose sight of target art while editing deep trees. | Compact sticky picture previews; campaign tests check their bounds during play. |
-| A large tree is difficult to survey on a phone. | Working Fit/100% controls, centered initial tree view, and an explicit horizontal-scroll cue. Full-size cards remain available for editing. |
+| Mobile players lose sight of target art while editing deep trees. | A viewport-sized play surface retains previews and actions throughout the campaign. |
+| A large tree is difficult to use without scrolling on a phone. | Readable branch explorer with Open/Up/Root controls, a path selector, and an optional whole-tree overview. Selection survives branch navigation. |
+| Landscape cards become too small when vertically stacked with studio controls. | Horizontal campaign branches and a studio editor beside the tree; card size is asserted during full campaign play. |
+| A short landscape picture panel forces actions below the board. | Explicit grid row limits and smaller previews; every control is checked against the board bounds. |
+| An icon-only help button loses its accessible name on phones. | Explicit accessible label and narrow-screen dialog tests. |
 | Fitted graph layout can retain oversized scroll bounds. | A wrapper clips the unscaled layout bounds; the 31-node test verifies the fitted width. |
 | Shrinking a 31-node tree animates the remaining node outside its new frame. | Removed position interpolation that disconnected cards from their edges. Reset centering is checked immediately, without waiting for animation. |
 | Selecting a studio question leaves stale axis/threshold controls. | Populate controls from the selected rule; update and selection are tested. |

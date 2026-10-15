@@ -145,3 +145,53 @@ describe('creative studio', () => {
     fireEvent.keyDown(document, { key: 'z', metaKey: true }); expect(document.querySelectorAll('.tree-node')).toHaveLength(1);
   });
 });
+
+describe('phone tree navigation', () => {
+  function phone() {
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); disconnect = vi.fn(); });
+    render(<App />);
+  }
+  test('uses a horizontal branch layout in short landscape viewports', () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(120);
+    phone(); choose(2);
+    expect(node('a')).toHaveStyle({ left: '64px', top: '56px' });
+    expect(node('b')).toHaveStyle({ left: '210px', top: '28px' });
+    expect(node('c')).toHaveStyle({ left: '210px', top: '84px' });
+    click('Open yes branch'); click('Go to parent branch'); click('Open no branch');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Explore tree' }), { target: { value: 'g' } });
+    expect(node('g')).toHaveStyle({ left: '192px', top: '56px' });
+  });
+  test('explores both branches and swaps distant leaves without losing the selected card', () => {
+    phone(); choose(2);
+    expect(document.querySelector('.compact-play')).not.toBeNull();
+    expect(button('Go to parent branch')).toBeDisabled();
+    click('Open yes branch'); fireEvent.click(node('d'));
+    expect(screen.getByText('Peach selected')).toBeVisible();
+    click('Go to parent branch'); click('Open no branch');
+    expect(screen.getByText('Peach selected')).toBeVisible();
+    fireEvent.click(node('g')); expect(score()).toContain('100 percent');
+    click('Go to tree root'); expect(screen.getByRole('combobox', { name: 'Explore tree' })).toHaveValue('a');
+  });
+  test('jumps to leaves, returns to their parent, and switches between overview and readable branches', () => {
+    phone(); choose(4);
+    const explorer = screen.getByRole('combobox', { name: 'Explore tree' });
+    fireEvent.change(explorer, { target: { value: 'h' } }); expect(document.querySelectorAll('.tree-node')).toHaveLength(1);
+    click('Go to parent branch'); expect(explorer).toHaveValue('g');
+    click('Fit whole tree'); expect(document.querySelectorAll('.tree-node')).toHaveLength(9);
+    click('Show tree at actual size'); expect(document.querySelectorAll('.tree-node')).toHaveLength(3);
+    click('Fit whole tree'); click('Go to tree root'); expect(explorer).toHaveValue('a');
+    expect(button('Fit whole tree')).toHaveAttribute('aria-pressed', 'false');
+  });
+  test('exposes both hinted cards in the explorer and survives focused branches being replaced', () => {
+    phone(); choose(3); click('A little hint');
+    expect(document.querySelectorAll('option[data-hinted]')).toHaveLength(2);
+    click(/Creative studio/); fireEvent.click(node('root')); click('Split region');
+    const leaf = document.querySelector('.tree-node.leaf')!.getAttribute('aria-label')!.split(':')[0].slice(5);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Explore tree' }), { target: { value: leaf } });
+    click('Go to tree root'); fireEvent.click(node('root')); click('Collapse branch to selected color');
+    expect(document.querySelectorAll('.tree-node')).toHaveLength(1);
+    click('Undo'); expect(document.querySelectorAll('.tree-node')).toHaveLength(3);
+  });
+});

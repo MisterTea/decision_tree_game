@@ -18,7 +18,7 @@ Click or tap two compatible cards, or drag one onto another. Keyboard players ca
 
 The **Creative studio** lets you split regions, edit rules, paint leaves, collapse branches, and download your art as a PNG. Your draft survives switching between the campaign and studio during a session. Reloading or resetting clears the draft, so export art you want to keep. Trees are limited to 31 nodes to keep the editor manageable.
 
-Quiet synthesized sound cues accompany selections, swaps, edits, hints, undo, exports, and wins. Use the speaker button to mute; the preference is saved in this browser. Sound starts only after interaction. Brief particles and star pops celebrate progress and respect reduced-motion preferences. On phones, picture previews stay visible as you explore the tree. Use **Fit** for a whole-tree overview, or **100%** for full-size editing.
+Quiet synthesized sound cues accompany selections, swaps, edits, hints, undo, exports, and wins. Use the speaker button to mute; the preference is saved in this browser. Sound starts only after interaction. Brief particles and star pops celebrate progress and respect reduced-motion preferences. On phones, the game fits the available screen height without page scrolling. Target art and play controls stay visible. **Open branch**, **Up**, and **Root** explore readable cards while preserving your selection; the tree selector can jump directly to a region. **Overview** fits the entire tree, and **Branches** returns to editing. The studio has a separate compact landscape layout.
 
 Hints prefer an immediate winning move. Otherwise they retrace a known legal route to the target; they can suggest undoing an earlier move and do not promise an optimal solution. Swap targets are designed solutions, not proven global minima.
 
@@ -50,7 +50,7 @@ python scripts/review-recordings.py qa/final
 
 Set `PLAYWRIGHT_CHANNEL=chrome` to use an installed Chrome instead. Set `BASE_URL` to test an already-running deployment. Every test records a WebM; the Python helper converts it to H.264 MP4, includes captured Web Audio, extracts review frames at 2 fps, and writes timestamped contact sheets and a recording manifest. It requires FFmpeg/FFprobe on PATH and Python with Pillow. Set `QA_DIR` to retain separate QA iterations. Recordings and coverage reports are ignored by Git.
 
-The browser suite includes full campaign play with and without hints, mouse/touch drag, keyboard controls, score persistence, audio/mute, reduced motion, invalid moves, and sandbox painting/editing/export up to the 31-node limit on both desktop and mobile.
+The browser suite includes full campaign play with and without hints, mouse/touch drag, keyboard controls, score persistence, audio/mute, reduced motion, invalid moves, and sandbox painting/editing/export up to the 31-node limit on both desktop and mobile. Nine additional phone viewports, from 320×480 to 844×390, play all 12 puzzles using branch buttons and use the studio. They check zero page scrolling, visible controls/previews, unclipped cards, and minimum card size throughout each game. Each viewport records at its actual resolution.
 
 ## Publish
 
@@ -60,8 +60,10 @@ GitHub Pages is configured to use GitHub Actions. Every push to `main` checks un
 
 - `src/engine.ts`: immutable tree operations, rendering, authored levels, and hints.
 - `src/App.tsx`: React game, accessible controls, progress, and studio.
-- `src/style.css`: responsive visual design and reduced-motion support.
+- `src/style.css` and `src/mobile.css`: visual design, viewport-sized phone layouts, and reduced motion.
+- `src/responsive.ts`: phone/orientation media-query tracking.
 - `src/engine.test.ts`: core behavior and campaign validation.
 - `tests/game.spec.ts`: desktop, mobile, input, and studio browser tests.
+- `tests/phone-layout.spec.ts`: full campaign and studio without scrolling at nine phone sizes.
 
 Inspired by the supplied Decision Tree Drawing Puzzle Game conversation. No conversation text or private documents are bundled in the public game.

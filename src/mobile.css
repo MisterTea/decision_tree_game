@@ -1,0 +1,183 @@
+/* A viewport-sized play surface, rather than a long mobile document. */
+.tree-view { min-width: 0; width: 100%; }
+.branch-navigation { display: flex; align-items: center; gap: 6px; min-height: 30px; }
+.branch-navigation button { min-height: 30px; padding: 4px 7px; display: flex; align-items: center; gap: 3px; font-size: 11px; }
+.branch-navigation select { flex: 1; min-width: 0; height: 30px; padding: 3px 6px; border: 1px solid #d4dec7; border-radius: 5px; background: #fcfdf7; color: #526b42; font: 11px 'DM Sans', sans-serif; }
+.open-branch { position: absolute; top: 128px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 3px; min-width: 104px; height: 30px; border: 1px solid #d9e2cd; border-radius: 5px; font-size: 10px; color: #617c4c; background: #f0f5e8; }
+
+.compact-play {
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  padding: env(safe-area-inset-top, 0px) max(10px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(10px, env(safe-area-inset-left, 0px));
+  display: flex;
+  flex-direction: column;
+}
+.compact-play .site-header { flex: 0 0 44px; height: 44px; gap: 8px; flex-wrap: nowrap; }
+.compact-play .brand { font-size: 17px; gap: 6px; }
+.compact-play .brand-mark { width: 25px; height: 28px; border-radius: 7px; }
+.compact-play .brand-mark svg { width: 17px; }
+.compact-play .site-header nav { gap: 11px; }
+.compact-play .site-header nav button { font-size: 10px; }
+.compact-play .nav-badge { display: none; }
+.compact-play .sound-button { width: 30px; height: 32px; margin: 0; }
+.compact-play .help-button { display: grid; place-items: center; width: 30px; height: 32px; padding: 0; }
+.compact-play .help-button span { display: none; }
+.compact-play main { flex: 1; min-height: 0; display: flex; padding: 6px 0; }
+.compact-play .intro, .compact-play .journey, .compact-play .below-board, .compact-play .site-footer { display: none; }
+.compact-play .workspace { flex: 1; min-height: 0; display: flex; }
+.compact-play .game-main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 5px; }
+.compact-play .puzzle-header { flex: 0 0 39px; min-height: 0; gap: 6px; margin: 0; }
+.compact-play .puzzle-header h2 { font-size: 16px; line-height: 1.3; margin: 3px 0 0; letter-spacing: -.4px; }
+.compact-play .puzzle-header p { display: none; }
+.compact-play .level-picker { font-size: 7px; letter-spacing: .8px; }
+.compact-play .mode-tag { font-size: 9px; padding: 5px 7px; }
+.compact-play .game-board { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: clip; }
+.compact-play .picture-panel { flex: 0 0 auto; position: static; display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr); gap: 0 7px; padding: 6px 14px; border-right: 0; border-bottom: 1px solid #dce1d2; box-shadow: none; backdrop-filter: none; }
+.compact-play .picture-section .pixel-frame { width: 90px; max-width: 100%; padding: 6px; margin: 4px auto 0; }
+.compact-play .picture-section .panel-label { max-width: 126px; margin: auto; font-size: 8px; letter-spacing: .5px; }
+.compact-play .picture-caption { display: none; }
+.compact-play .picture-divider { grid-column: 2; grid-row: 1; margin: 0; transform: rotate(-90deg); }
+.compact-play .picture-divider span { display: none; }
+.compact-play .difference-toggle { grid-column: 2; grid-row: 1; align-self: end; justify-content: center; min-height: 28px; margin: 0; }
+.compact-play .difference-toggle input { width: 15px; height: 15px; }
+.compact-play .difference-toggle span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.compact-play .logic-panel { flex: 1; min-height: 0; padding: 5px 9px 3px; gap: 3px; }
+.compact-play .logic-toolbar { flex: 0 0 24px; }
+.compact-play .logic-toolbar .panel-label { font-size: 8px; }
+.compact-play .node-count { gap: 6px; font-size: 9px; }
+.compact-play .fit-button { height: 26px; padding: 3px 7px; }
+.compact-play .stats-row { flex: 0 0 33px; margin: 0; padding: 0 0 4px; }
+.compact-play .stats-row > div { gap: 2px; padding-left: 13px; }
+.compact-play .stats-row > div:first-child { padding-left: 0; }
+.compact-play .stats-row strong { font-size: 18px; }
+.compact-play .stats-row strong small { font-size: 10px; }
+.compact-play .stats-row > div > span { font-size: 8px; }
+.compact-play .tree-area { flex: 1; min-height: 0; margin: 0; justify-content: flex-start; }
+.compact-play .tree-view { flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.compact-play .tree-scroll { flex: 1; min-height: 0; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.compact-play .tree-legend { display: none; }
+.compact-play .tree-node, .compact-play .tree-node.leaf { min-width: 104px; min-height: 44px; font-size: 12px; }
+.compact-play .tree-node .node-swatch { width: 15px; height: 15px; }
+.compact-play .picked-label { top: -12px; font-size: 7px; background: #fbfcf7; padding: 0 3px; }
+.compact-play .instruction-card { flex-shrink: 0; min-height: 35px; padding: 5px 7px; margin: 0; gap: 6px; align-items: center; }
+.compact-play .instruction-icon { width: 24px; height: 24px; }
+.compact-play .instruction-icon svg { width: 16px; }
+.compact-play .instruction-card strong { font-size: 10px; margin: 0 0 1px; }
+.compact-play .instruction-card p { font-size: 9px; line-height: 1.25; }
+.compact-play .game-actions { flex-shrink: 0; min-height: 40px; padding: 0; gap: 6px; }
+.compact-play .game-actions > div { gap: 18px; }
+.compact-play .icon-action, .compact-play .hint-button, .compact-play .game-actions .button { min-height: 38px; font-size: 11px; }
+.compact-play .notice { flex-shrink: 0; min-height: 0; padding: 0 0 2px; font-size: 9px; line-height: 1.25; }
+.compact-play .notice:empty { display: none; }
+.compact-play .puzzle-navigation { flex: 0 0 29px; padding: 0; font-size: 10px; }
+.compact-play .puzzle-navigation button { min-height: 29px; }
+.compact-play .studio-board { min-height: 0; }
+.compact-play .studio-board .picture-panel { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 23px; padding: 5px 12px; }
+.compact-play .studio-board .picture-section { width: 72px; }
+.compact-play .studio-board .picture-section .pixel-frame { width: 62px; padding: 5px; margin-top: 2px; }
+.compact-play .studio-board .picture-section .panel-label { font-size: 7px; white-space: nowrap; }
+.compact-play .export-button { margin: 0; min-height: 36px; font-size: 11px; }
+.compact-play .studio-board .stats-row { display: none; }
+.compact-play .studio-controls { flex-shrink: 0; margin: 0; padding: 5px 7px; }
+.compact-play .studio-controls-title, .compact-play .studio-controls > p, .compact-play .studio-limit { display: none; }
+.compact-play .swatches { display: grid; grid-template-columns: repeat(8,1fr); gap: 6px; margin: 0 0 6px; }
+.compact-play .swatch { width: 100%; height: 27px; border-radius: 4px; }
+.compact-play .split-controls { flex-wrap: nowrap; gap: 5px; }
+.compact-play .split-controls label { min-width: 0; gap: 2px; font-size: 9px; }
+.compact-play .split-controls select { min-height: 32px; height: 32px; padding: 3px; font-size: 11px; }
+.compact-play .split-controls .button { min-height: 32px; padding: 5px 8px; font-size: 10px; }
+.compact-play .studio-controls .text-button { display: block; min-height: 24px; padding: 2px 0; margin-top: 3px; font-size: 10px; }
+.compact-play .studio-note { font-size: 8px; }
+.compact-play .feedback-burst { top: 40%; }
+
+@media (max-width: 360px) {
+  .compact-play .brand { font-size: 15px; }
+  .compact-play .brand-mark { display: none; }
+  .compact-play .site-header { gap: 6px; }
+  .compact-play .site-header nav { gap: 9px; }
+  .compact-play .puzzle-header h2 { font-size: 15px; }
+}
+@media (max-height: 650px) {
+  .compact-play .picture-section .pixel-frame { width: 74px; }
+  .compact-play .picture-panel { padding: 4px 12px; }
+  .compact-play .instruction-card p { font-size: 9px; }
+}
+@media (max-height: 520px) and (min-width: 540px) {
+  .compact-play .site-header { flex-basis: 36px; height: 36px; }
+  .compact-play .puzzle-header { flex-basis: 30px; }
+  .compact-play .level-picker { font-size: 6px; }
+  .compact-play .puzzle-header h2 { font-size: 14px; margin: 1px 0 0; }
+  .compact-play .game-board { display: grid; grid-template-columns: 140px minmax(0,1fr); }
+  .compact-play .picture-panel { display: flex; flex-direction: column; padding: 5px 10px; justify-content: center; gap: 5px; border-bottom: 0; border-right: 1px solid #dce1d2; }
+  .compact-play .picture-section .pixel-frame { width: 72px; }
+  .compact-play .picture-divider { display: none; }
+  .compact-play .difference-toggle { align-self: center; min-height: 24px; }
+  .compact-play .difference-toggle span { position: static; width: auto; height: auto; clip-path: none; font-size: 7px; white-space: normal; }
+  .compact-play .studio-board .picture-panel { flex-direction: column; gap: 12px; }
+  .compact-play .studio-board .picture-section { width: 88px; }
+  .compact-play .studio-board .picture-section .pixel-frame { width: 84px; }
+  .compact-play .logic-panel { padding: 3px 7px; gap: 2px; }
+  .compact-play .stats-row { display: none; }
+  .compact-play .instruction-card { min-height: 28px; padding: 2px 6px; }
+  .compact-play .instruction-card p { display: none; }
+  .compact-play .game-actions { min-height: 34px; }
+  .compact-play .game-actions .button, .compact-play .icon-action, .compact-play .hint-button { min-height: 32px; }
+  .compact-play .puzzle-navigation { flex-basis: 24px; }
+  .compact-play .puzzle-navigation button { min-height: 24px; }
+  .compact-play .studio-controls { padding: 4px 6px; }
+  .compact-play .swatches { margin-bottom: 3px; }
+  .compact-play .swatch { height: 23px; }
+}
+
+.compact-play .picked-label { display: none; }
+
+.compact-play .difference-toggle{flex-direction:column;gap:1px}.compact-play .difference-toggle::after{content:'Errors';font-size:8px;color:#788968}
+.compact-play .game-main:has(.studio-board) .puzzle-navigation { display: none; }
+.compact-play .logic-panel:has(.notice:not(:empty)) .instruction-card { display: none; }
+.open-branch:focus-visible { outline-offset: -3px; }
+@media (max-height: 520px) and (min-width: 540px) {
+  .compact-play .game-board { grid-template-columns: 112px minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
+  .compact-play .picture-panel { min-height: 0; min-width: 0; }
+  .compact-play .picture-section .panel-label { font-size: 7px; letter-spacing: .2px; gap: 2px; }
+  .compact-play .difference-toggle span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .compact-play .studio-board .logic-panel { display: grid; grid-template-columns: minmax(0,1fr) 178px; grid-template-rows: 24px minmax(0,1fr) 34px; gap: 4px 6px; }
+  .compact-play .studio-board .logic-toolbar { grid-column: 1 / -1; }
+  .compact-play .studio-board .tree-area { grid-column: 1; grid-row: 2; }
+  .compact-play .studio-board .studio-controls { grid-column: 2; grid-row: 2; align-self: center; }
+  .compact-play .studio-board .game-actions { grid-column: 1 / -1; grid-row: 3; }
+  .compact-play .studio-board .notice { grid-column: 1 / -1; }
+  .compact-play .studio-board .swatches { grid-template-columns: repeat(4,1fr); gap: 5px; margin-bottom: 5px; }
+  .compact-play .studio-board .swatch { height: 27px; }
+  .compact-play .studio-board .studio-controls .text-button { font-size: 9px; }
+}
+@media (max-height: 360px) and (min-width: 540px) {
+  .compact-play .instruction-card:not(.success-card) { display: none; }
+  .compact-play .picture-section .pixel-frame { width: 58px; }
+  .compact-play .picture-section .panel-label > span:last-child:not(:first-child) { display: none; }
+}
+@media (max-height: 550px) and (max-width: 539px) {
+  .compact-play .site-header { flex-basis: 36px; height: 36px; }
+  .compact-play .puzzle-header { flex-basis: 30px; }
+  .compact-play .puzzle-header h2 { font-size: 14px; margin-top: 1px; }
+  .compact-play .picture-section .pixel-frame { width: 62px; }
+  .compact-play .picture-panel { padding-block: 3px; }
+  .compact-play .stats-row { flex-basis: 27px; padding-bottom: 2px; }
+  .compact-play .stats-row strong { font-size: 15px; }
+  .compact-play .logic-toolbar { flex-basis: 22px; }
+  .compact-play .instruction-card:not(.success-card) { display: none; }
+  .compact-play .game-actions { min-height: 34px; }
+  .compact-play .game-actions .button, .compact-play .icon-action, .compact-play .hint-button { min-height: 32px; }
+  .compact-play .puzzle-navigation { flex-basis: 24px; }
+  .compact-play .puzzle-navigation button { min-height: 24px; }
+  .compact-play .game-main:has(.studio-board) .puzzle-header { display: none; }
+  .compact-play .studio-board .picture-section .pixel-frame { width: 52px; }
+}
+@media (max-height: 360px) and (min-width: 540px), (max-height: 550px) and (max-width: 539px) {
+  .compact-play .logic-panel:has(.success-card) .logic-toolbar { display: none; }
+  .compact-play .logic-panel:has(.notice:not(:empty)) .logic-toolbar { display: none; }
+  .compact-play .notice:not(:empty) { order: -1; min-height: 22px; padding: 3px 0; }
+  .compact-play .success-card { order: -1; min-height: 24px; padding: 2px 6px; }
+  .compact-play .success-card p { display: none; }
+  .compact-play .success-card .instruction-icon { width: 18px; height: 18px; }
+}

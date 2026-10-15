@@ -1,11 +1,14 @@
 import { test, expect, finishAudio } from './fixtures';
 import type { Page } from '@playwright/test';
+import { revealNode, clickNode, treeIds } from './navigation';
 
 async function open(page: Page) {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'A change of scenery' })).toBeVisible();
 }
 async function tapOrClick(page: Page, name: string) {
+  const id = /^Node ([^:]+):/.exec(name)?.[1];
+  if (id) await revealNode(page, id);
   const button = page.getByRole('button', { name, exact: true });
   if (test.info().project.name === 'mobile') await button.tap(); else await button.click();
 }
@@ -36,9 +39,13 @@ test('the full campaign is solvable through the interface, including subtree mov
   for (let level = 0; level < 12; level++) {
     for (let move = 0; move < 8 && !(await page.locator('.success-card').count()); move++) {
       await page.getByRole('button', { name: 'A little hint', exact: true }).click();
-      const names = await page.locator('.tree-node.hinted').evaluateAll(elements => elements.map(el => el.getAttribute('aria-label')!));
-      expect(names).toHaveLength(2);
-      await tapOrClick(page, names[0]); await tapOrClick(page, names[1]);
+      if (await page.locator('.compact-play').count()) {
+        const ids = await page.locator('.branch-navigation option[data-hinted]').evaluateAll(elements => elements.map(el => (el as HTMLOptionElement).value));
+        expect(ids).toHaveLength(2); await clickNode(page, ids[0]); await clickNode(page, ids[1]);
+      } else {
+        const names = await page.locator('.tree-node.hinted').evaluateAll(elements => elements.map(el => el.getAttribute('aria-label')!));
+        expect(names).toHaveLength(2); await tapOrClick(page, names[0]); await tapOrClick(page, names[1]);
+      }
     }
     await expect(page.locator('.success-card')).toBeVisible();
     if (level === 9) await page.screenshot({ path: `tmp/subtree-${test.info().project.name}.png` });
@@ -98,8 +105,7 @@ test('plays the entire campaign without hints and keeps target previews availabl
     await expect(page.getByRole('heading', { name: level.title, exact: true })).toBeVisible();
     for (const [a, b] of [...level.scramble].reverse()) {
       for (const id of [a, b]) {
-        const name = await page.getByRole('button', { name: new RegExp(`^Node ${id}:`) }).getAttribute('aria-label');
-        await tapOrClick(page, name!);
+        await clickNode(page, id);
       }
     }
     await expect(page.getByRole('img', { name: 'Your picture, 100 percent matching', exact: true })).toBeVisible();
@@ -136,12 +142,12 @@ test('sound, reduced motion, mistakes, recovery, and fit controls stay usable', 
   await expect(page.getByRole('button', { name: 'Enable sound', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await page.getByRole('button', { name: 'The puzzles', exact: true }).click();
   await page.getByRole('button', { name: /Preview: Wild growth/ }).click();
-  await tapOrClick(page, (await page.getByRole('button', { name: /^Node a:/ }).getAttribute('aria-label'))!);
-  await tapOrClick(page, (await page.getByRole('button', { name: /^Node b:/ }).getAttribute('aria-label'))!);
+  await clickNode(page, 'a');
+  await clickNode(page, 'b');
   await expect(page.getByRole('status')).toContainText('Choose separate branches');
   await page.getByRole('button', { name: 'Reset', exact: true }).click();
   await page.getByRole('button', { name: 'A little hint', exact: true }).click();
-  await expect(page.locator('.hinted')).toHaveCount(2);
+  if (await page.locator('.compact-play').count()) await expect(page.locator('.branch-navigation option[data-hinted]')).toHaveCount(2); else await expect(page.locator('.hinted')).toHaveCount(2);
 });
 
 test('studio builds a full 31-node mosaic and handles its limit without losing work', async ({ page }) => {
@@ -152,21 +158,21 @@ test('studio builds a full 31-node mosaic and handles its limit without losing w
   let painted = 0;
   while (queue.length) {
     const region = queue.shift()!;
-    const selector = page.getByRole('button', { name: new RegExp(`^Node ${region.id}:`) });
+    const selector = await revealNode(page, region.id);
     await selector.click();
     if (region.depth === 4) { await page.getByRole('button', { name: `Paint ${colors[painted++ % colors.length]}`, exact: true }).click(); continue; }
     const axis = region.depth % 2 === 0 ? 'x' : 'y';
     const value = axis === 'x' ? (region.x0 + region.x1) / 2 : (region.y0 + region.y1) / 2;
     await page.getByLabel('Split axis', { exact: true }).selectOption(axis);
     await page.getByLabel('Split coordinate', { exact: true }).selectOption(String(value));
-    const previous = new Set(await page.locator('.tree-node').evaluateAll(elements => elements.map(el => el.getAttribute('aria-label')!.split(':')[0].slice(5))));
+    const previous = new Set(await treeIds(page));
     await page.getByRole('button', { name: 'Split region', exact: true }).click();
-    const added = (await page.locator('.tree-node').evaluateAll(elements => elements.map(el => el.getAttribute('aria-label')!.split(':')[0].slice(5)))).filter(id => !previous.has(id));
+    const added = (await treeIds(page)).filter(id => !previous.has(id));
     const yes = added.find(id => id.endsWith('-yes'))!, no = added.find(id => id.endsWith('-no'))!;
     queue.push({ ...region, id: yes, depth: region.depth + 1, ...(axis === 'x' ? { x1: value } : { y1: value }) });
     queue.push({ ...region, id: no, depth: region.depth + 1, ...(axis === 'x' ? { x0: value } : { y0: value }) });
   }
-  await expect(page.locator('.tree-node')).toHaveCount(31);
+  expect(await treeIds(page)).toHaveLength(31);
   await expect(page.getByRole('button', { name: 'Split region', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Fit whole tree', exact: true }).click();
   await page.locator('.tree-scroll').scrollIntoViewIfNeeded(); await page.waitForTimeout(700);
@@ -174,15 +180,15 @@ test('studio builds a full 31-node mosaic and handles its limit without losing w
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'The puzzles', exact: true }).click();
   await page.getByRole('button', { name: /Creative studio/ }).click();
-  await expect(page.locator('.tree-node')).toHaveCount(31);
+  expect(await treeIds(page)).toHaveLength(31);
   const downloadPromise = page.waitForEvent('download'); await page.getByRole('button', { name: 'Save picture', exact: true }).click();
   const download = await downloadPromise; await download.saveAs(test.info().outputPath('mosaic.png'));
-  await page.getByRole('button', { name: /^Node root:/ }).click();
+  await (await revealNode(page, 'root')).click();
   await expect(page.getByLabel('Split axis', { exact: true })).toHaveValue('x');
   await page.getByRole('button', { name: 'Collapse branch to selected color' }).click();
   await expect(page.locator('.tree-node')).toHaveCount(1);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(page.locator('.tree-node')).toHaveCount(31);
+  expect(await treeIds(page)).toHaveLength(31);
   await page.getByRole('button', { name: 'Reset', exact: true }).click();
   await expect(page.locator('.tree-node')).toHaveCount(1);
   const rootBounds = await page.getByRole('button', { name: /^Node root:/ }).boundingBox();
