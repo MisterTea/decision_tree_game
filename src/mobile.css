@@ -106,7 +106,7 @@
   .compact-play .game-board { display: grid; grid-template-columns: 140px minmax(0,1fr); }
   .compact-play .picture-panel { display: flex; flex-direction: column; padding: 5px 10px; justify-content: center; gap: 5px; border-bottom: 0; border-right: 1px solid #dce1d2; }
   .compact-play .picture-section .pixel-frame { width: 72px; }
-  .compact-play .picture-divider { display: none; }
+  .compact-play .picture-divider { display: flex; flex: 0 0 12px; height: 12px; transform: none; }
   .compact-play .difference-toggle { align-self: center; min-height: 24px; }
   .compact-play .difference-toggle span { position: static; width: auto; height: auto; clip-path: none; font-size: 7px; white-space: normal; }
   .compact-play .studio-board .picture-panel { flex-direction: column; gap: 12px; }
