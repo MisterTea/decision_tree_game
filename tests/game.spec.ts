@@ -15,6 +15,16 @@ async function tapOrClick(page: Page, name: string) {
 test('first puzzle supports input, undo, reset, score, and persistent progress', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await open(page);
+  const pictures = page.locator('.picture-panel .picture-section');
+  await expect(pictures.nth(0)).toContainText('YOUR PICTURE');
+  await expect(pictures.nth(1)).toContainText('THE TARGET');
+  const source = (await pictures.nth(0).boundingBox())!, target = (await pictures.nth(1).boundingBox())!;
+  if (test.info().project.name === 'desktop') expect(source.y + source.height).toBeLessThan(target.y);
+  else expect(source.x + source.width).toBeLessThan(target.x);
+  for (const axis of await page.locator('.picture-panel .axis-y').all()) {
+    await expect(axis.locator('svg.lucide-arrow-up')).toHaveCount(1);
+    expect(await axis.evaluate(el => getComputedStyle(el).writingMode)).toBe('horizontal-tb');
+  }
   await page.screenshot({ path: `tmp/initial-${test.info().project.name}.png` });
   await tapOrClick(page, 'Node b: Peach color');
   await expect(page.getByRole('button', { name: 'Node b: Peach color', exact: true })).toHaveAttribute('aria-pressed', 'true');

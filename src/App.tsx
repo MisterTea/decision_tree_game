@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, HelpCircle, Layers, Leaf, Lightbulb, Maximize2, MousePointer2, Palette, RotateCcw, Sparkles, Sprout, Star, Undo2, X, Download, Scissors, Volume2, VolumeX } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowLeft, ArrowRight, Check, ChevronDown, GitBranch, HelpCircle, Layers, Leaf, Lightbulb, Maximize2, MousePointer2, Palette, RotateCcw, Sparkles, Sprout, Star, Undo2, X, Download, Scissors, Volume2, VolumeX } from 'lucide-react';
 import { accuracy, canSwap, extendRoute, find, hint, levels, nodes, palette, pixels, SIZE, stars, swap, update, visits } from './engine';
 import type { Color, Level, Move, Tree } from './engine';
 import { createSoundPlayer, readSoundEnabled, saveSoundEnabled } from './feedback';
@@ -27,7 +27,7 @@ function PixelPicture({ tree, target, selected, difference, label }: { tree: Tre
   return <div className="pixel-frame"><div className="pixel-grid" role="img" aria-label={label}>{colors.map((color, i) => {
     const active = selected && visits(tree, selected, i % SIZE, Math.floor(i / SIZE));
     return <span key={i} style={{ background: palette[color].hex }} className={`${selected && !active ? 'pixel-dim' : ''} ${difference && expected?.[i] !== color ? 'pixel-wrong' : ''}`} />;
-  })}</div><span className="axis-origin">0</span><span className="axis-x">x →</span><span className="axis-y">y ↓</span></div>;
+  })}</div><span className="axis-origin">0</span><span className="axis-x">x →</span><span className="axis-y"><ArrowUp size={9} aria-hidden="true" /><span>y</span></span></div>;
 }
 
 type PlacedNode = { node: Tree; x: number; y: number; parent?: string; side?: 'yes' | 'no' };
@@ -263,9 +263,9 @@ export default function App() {
 
           <div className={`game-board ${sandbox ? 'studio-board' : ''}`}>
             <section className="picture-panel" aria-label="Picture comparison">
-              {!sandbox && <div className="picture-section"><div className="panel-label"><span><span className="tiny-dot target-dot" />THE TARGET</span><span>8 × 8</span></div><PixelPicture tree={level.target} label="Target pixel art to recreate" /><p className="picture-caption">A little inspiration.</p></div>}
-              {!sandbox && <div className="picture-divider"><span /><ArrowDown size={15} /><span /></div>}
               <div className="picture-section"><div className="panel-label"><span><span className="tiny-dot live-dot" />{sandbox ? 'YOUR CANVAS' : 'YOUR PICTURE'}</span><span className="live-label">LIVE</span></div><PixelPicture tree={tree} target={level.target} selected={sandbox ? null : selected} difference={!sandbox && difference} label={sandbox ? 'Your pixel art canvas' : `Your picture, ${Math.round(match * 100)} percent matching`} /><p className="picture-caption">{sandbox ? 'Every branch paints a possibility.' : solved ? 'Right where everything belongs.' : 'A work in progress.'}</p></div>
+              {!sandbox && <div className="picture-divider"><span /><ArrowDown size={15} /><span /></div>}
+              {!sandbox && <div className="picture-section"><div className="panel-label"><span><span className="tiny-dot target-dot" />THE TARGET</span><span>8 × 8</span></div><PixelPicture tree={level.target} label="Target pixel art to recreate" /><p className="picture-caption">A little inspiration.</p></div>}
               {!sandbox && <label className="difference-toggle" title="Highlight mismatched pixels"><input type="checkbox" checked={difference} onChange={e => setDifference(e.target.checked)} /><span>Highlight mismatched pixels</span></label>}
               {sandbox && <button className="button secondary export-button" onClick={exportImage}><Download size={15} />Save picture</button>}
             </section>
