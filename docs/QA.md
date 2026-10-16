@@ -8,16 +8,16 @@ Coverage includes **every production TypeScript/TSX source file**, including the
 
 | Metric | Final coverage |
 | --- | ---: |
-| Statements | 98.28% |
-| Branches | 97.06% |
-| Functions | 98.55% |
+| Statements | 98.22% |
+| Branches | 96.61% |
+| Functions | 98.43% |
 | Lines | 100% |
 
 Each source file must individually meet an 81% floor in all four metrics. CI runs `npm run test:coverage`, and a coverage regression fails the deployment.
 
 ## Recorded browser tests
 
-There are 29 end-to-end scenarios: ten cases each in desktop and mobile Chromium, including touch input emulation. The normal viewports are 1440×1000 and 390×844; narrow-layout cases use 320×720, and mouse/touch edge-scrolling cases use 800×1000 to exercise an overflowing tree pane. Nine more viewport-specific scenarios play the entire campaign and use the studio: 320×480, 320×568, 360×640, 375×667, 390×844, 412×915, 568×320, 667×375, and 844×390. These use touch input and branch buttons without page or tree scrolling. Every move checks document dimensions, card bounds and minimum size, and every visible control/preview against the board edges. Each video uses its viewport dimensions. The 320×480 case also covers a reduced visible area caused by browser controls.
+There are 38 end-to-end scenarios: ten cases each in desktop and mobile Chromium, including touch input emulation. The normal viewports are 1440×1000 and 390×844; narrow-layout cases use 320×720, and mouse/touch edge-scrolling cases use 800×1000 to exercise an overflowing tree pane. Eighteen more viewport-specific scenarios play the entire campaign and use the studio: 320×480, 320×568, 360×640, 375×667, 390×844, 412×915, 568×320, 667×375, and 844×390. Each phone size plays the campaign/studio and separately tests a real touch drag to a distant card, background swiping, and Fit/100% controls. All tree cards remain in one pane. Every move checks document dimensions, minimum card size, and controls/previews against the board edges. The tree pane may scroll in both directions; the page stays fixed. Each video uses its viewport dimensions. The 320×480 case also covers a reduced visible area caused by browser controls.
 
 1. First-puzzle play, selection/cancel, win, completion hides the tree, review/hide controls, undo/reset, scoring, and saved progress. Phone-size runs also reveal/hide the solved tree on the first and final puzzles and check both views for overflow. Keyboard focus moves to the next puzzle on completion and to the hide control during review.
 2. Every campaign puzzle solved with hints through the interface.
@@ -28,8 +28,7 @@ There are 29 end-to-end scenarios: ten cases each in desktop and mobile Chromium
 7. Studio splitting, painting, editing, collapsing, undo, and PNG export.
 8. A full 31-node studio mosaic, split limit, fit bounds, draft restoration, export, collapse/undo, and immediate reset centering. Both downloaded PNGs are 512×512 with the eight expected colors.
 9. Narrow-screen help and studio, horizontal-overflow checks, and absence of third-party asset requests.
-
-10. Edge-assisted mouse and touch drags: hold a stationary pointer at the bottom/right pane edge, reveal an initially clipped target, drop on its new position, keep page scroll unchanged, and stop pane scrolling after release.
+10. Edge-assisted mouse and touch drags: hold a stationary pointer at the bottom/right pane edge, reveal an initially clipped target, drop on its new position, keep page scroll unchanged, and stop pane scrolling after release. Nine additional phone cases repeat this with actual touch input, swipe the background, and check Fit/100% without branch menus.
 
 The tests run against the production build. Every test records video, and test instrumentation captures the browser's real Web Audio output. The review helper encodes H.264/AAC MP4s, measures audio peaks, extracts timestamped frames at 2 fps from those MP4s, and builds contact sheets plus a playable HTML index. Audio alignment is approximate to the recording start.
 
@@ -43,8 +42,8 @@ Open `qa/final/index.html` after a local run. Each scenario has its own `video.m
 | The solved tree still looks playable after a win. | Replace it with an explicit Puzzle complete panel and stars. Show puzzle again reveals the solved tree without changing the score; Hide puzzle returns to the result. Undo, Reset, and the next puzzle clear the review state. Opening review also clears the celebration so it cannot cover the tree. |
 | Dragging has no moving visual feedback. | A translucent copy preserves the grab offset and follows the pointer outside the tree frame. It ignores hit testing, stays out of the accessibility tree, and clears on drop or cancellation. A viewport overlay prevents edge drags from adding scrollbars. |
 | Mobile players lose sight of target art while editing deep trees. | A viewport-sized play surface retains previews and actions throughout the campaign. |
-| A large tree is difficult to use without scrolling on a phone. | Readable branch explorer with Open/Up/Root controls, a path selector, and an optional whole-tree overview. Selection survives branch navigation. |
-| Landscape cards become too small when vertically stacked with studio controls. | Horizontal campaign branches and a studio editor beside the tree; card size is asserted during full campaign play. |
+| Subtree menus interrupt the mobile view of the tree. | Restore the complete tree at readable size in one scrollable pane. Background swipes and drag-edge scrolling reach distant cards, while target art and controls stay visible. Fit provides an optional overview. |
+| Landscape cards become too small when vertically stacked with studio controls. | A scrollable full tree and a studio editor beside it; card size is asserted during full campaign play. |
 | A short landscape picture panel forces actions below the board. | Explicit grid row limits and smaller previews; every control is checked against the board bounds. |
 | An icon-only help button loses its accessible name on phones. | Explicit accessible label and narrow-screen dialog tests. |
 | Fitted graph layout can retain oversized scroll bounds. | A wrapper clips the unscaled layout bounds; the 31-node test verifies the fitted width. |

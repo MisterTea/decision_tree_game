@@ -1,0 +1,48 @@
+import { test, expect } from './fixtures';
+import { expectNoPlayScroll } from './navigation';
+
+    test('scrolls the full tree during a touch drag and drops on a distant card', async ({ page, context }) => {
+      await page.goto('./');
+      await page.getByRole('button', { name: 'The puzzles', exact: true }).tap();
+      await page.getByRole('button', { name: /Preview: A place in the sun/ }).tap();
+      await expect(page.locator('.tree-node')).toHaveCount(9);
+      await expect(page.locator('.branch-navigation')).toHaveCount(0);
+      const pane = page.locator('.tree-scroll');
+      const source = page.getByRole('button', { name: 'Node d: Peach color', exact: true });
+      const target = page.getByRole('button', { name: 'Node i: Forest color', exact: true });
+      await source.scrollIntoViewIfNeeded();
+      const before = await pane.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }));
+      const bounds = (await pane.boundingBox())!, start = (await source.boundingBox())!;
+      const touch = await context.newCDPSession(page);
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: start.x + start.width / 2, y: start.y + start.height / 2 }] });
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: bounds.x + bounds.width - 6, y: bounds.y + bounds.height - 6 }] });
+      await expect.poll(() => pane.evaluate((el, before) => el.scrollLeft > before.x + 20 || el.scrollTop > before.y + 20, before)).toBe(true);
+      await expect.poll(() => target.evaluate(el => {
+        const card = el.getBoundingClientRect(), pane = el.closest('.tree-scroll')!.getBoundingClientRect();
+        return card.left >= pane.left && card.right <= pane.right && card.top >= pane.top && card.bottom <= pane.bottom;
+      })).toBe(true);
+      await expect(page.locator('.drag-ghost')).toBeVisible();
+      await expectNoPlayScroll(page);
+      await page.screenshot({ path: test.info().outputPath('phone-edge-scroll.png') });
+      const destination = (await target.boundingBox())!;
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: destination.x + destination.width / 2, y: destination.y + destination.height / 2 }] });
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect(page.getByRole('button', { name: 'Node i: Peach color', exact: true })).toBeVisible();
+      await expect(page.locator('.drag-ghost')).toHaveCount(0);
+      const stopped = await pane.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }));
+      await page.waitForTimeout(150);
+      expect(await pane.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }))).toEqual(stopped);
+      await expectNoPlayScroll(page);
+      await page.getByRole('button', { name: 'Fit whole tree', exact: true }).tap();
+      await expect.poll(() => pane.evaluate(el => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+      await page.getByRole('button', { name: 'Show tree at actual size', exact: true }).tap();
+      await expect.poll(() => pane.evaluate(el => el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight)).toBe(true);
+      await pane.evaluate(el => { el.scrollLeft = 0; el.scrollTop = 0; });
+      const horizontal = await pane.evaluate(el => el.scrollWidth > el.clientWidth);
+      const swipeX = horizontal ? bounds.x + bounds.width - 12 : bounds.x + 5, swipeY = horizontal ? bounds.y + 5 : bounds.y + bounds.height - 12;
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: swipeX, y: swipeY }] });
+      for (let step = 1; step <= 5; step++) await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: swipeX - (horizontal ? step * 20 : 0), y: swipeY - (horizontal ? 0 : step * 20) }] });
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect.poll(() => pane.evaluate(el => Math.max(el.scrollLeft, el.scrollTop))).toBeGreaterThan(20);
+      await expectNoPlayScroll(page);
+    });

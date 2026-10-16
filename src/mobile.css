@@ -1,10 +1,5 @@
 /* A viewport-sized play surface, rather than a long mobile document. */
 .tree-view { min-width: 0; width: 100%; }
-.branch-navigation { display: flex; align-items: center; gap: 6px; min-height: 30px; }
-.branch-navigation button { min-height: 30px; padding: 4px 7px; display: flex; align-items: center; gap: 3px; font-size: 11px; }
-.branch-navigation select { flex: 1; min-width: 0; height: 30px; padding: 3px 6px; border: 1px solid #d4dec7; border-radius: 5px; background: #fcfdf7; color: #526b42; font: 11px 'DM Sans', sans-serif; }
-.open-branch { position: absolute; top: 128px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 3px; min-width: 104px; height: 30px; border: 1px solid #d9e2cd; border-radius: 5px; font-size: 10px; color: #617c4c; background: #f0f5e8; }
-
 .compact-play {
   height: 100vh;
   height: 100dvh;
@@ -55,7 +50,7 @@
 .compact-play .stats-row > div > span { font-size: 8px; }
 .compact-play .tree-area { flex: 1; min-height: 0; margin: 0; justify-content: flex-start; }
 .compact-play .tree-view { flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; }
-.compact-play .tree-scroll { flex: 1; min-height: 0; max-height: none; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.compact-play .tree-scroll { flex: 1; min-height: 0; max-height: none; padding: 0; display: block; overflow: auto; touch-action: pan-x pan-y; }
 .compact-play .tree-legend { display: none; }
 .compact-play .tree-node, .compact-play .tree-node.leaf { min-width: 104px; min-height: 44px; font-size: 12px; }
 .compact-play .tree-node .node-swatch { width: 15px; height: 15px; }
@@ -135,7 +130,6 @@
 .compact-play .difference-toggle{flex-direction:column;gap:1px}.compact-play .difference-toggle::after{content:'Errors';font-size:8px;color:#788968}
 .compact-play .game-main:has(.studio-board) .puzzle-navigation { display: none; }
 .compact-play .logic-panel:has(.notice:not(:empty)) .instruction-card { display: none; }
-.open-branch:focus-visible { outline-offset: -3px; }
 @media (max-height: 520px) and (min-width: 540px) {
   .compact-play .game-board { grid-template-columns: 112px minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
   .compact-play .picture-panel { min-height: 0; min-width: 0; }
@@ -191,3 +185,7 @@
   .compact-play .completion-panel h3 { font-size: 18px; }
   .compact-play .completion-panel .button { min-height: 32px; padding: 6px 12px; }
 }
+
+.compact-play .tree-scaled { flex-shrink: 0; }
+.compact-play .workspace, .compact-play .game-main, .compact-play .game-board, .compact-play .logic-panel, .compact-play .tree-area, .compact-play .tree-scroll { min-width: 0; }
+.compact-play .tree-node:disabled, .compact-play .studio-board .tree-node { touch-action: pan-x pan-y; }

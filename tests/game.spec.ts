@@ -47,13 +47,8 @@ test('the full campaign is solvable through the interface, including subtree mov
   for (let level = 0; level < 12; level++) {
     for (let move = 0; move < 8 && !(await page.locator('.success-card').count()); move++) {
       await page.getByRole('button', { name: 'A little hint', exact: true }).click();
-      if (await page.locator('.compact-play').count()) {
-        const ids = await page.locator('.branch-navigation option[data-hinted]').evaluateAll(elements => elements.map(el => (el as HTMLOptionElement).value));
-        expect(ids).toHaveLength(2); await clickNode(page, ids[0]); await clickNode(page, ids[1]);
-      } else {
-        const names = await page.locator('.tree-node.hinted').evaluateAll(elements => elements.map(el => el.getAttribute('aria-label')!));
-        expect(names).toHaveLength(2); await tapOrClick(page, names[0]); await tapOrClick(page, names[1]);
-      }
+      const names = await page.locator('.tree-node.hinted').evaluateAll(elements => elements.map(el => el.getAttribute('aria-label')!));
+      expect(names).toHaveLength(2); await tapOrClick(page, names[0]); await tapOrClick(page, names[1]);
     }
     await expect(page.locator('.success-card')).toBeVisible();
     if (level === 9) await page.screenshot({ path: `tmp/subtree-${test.info().project.name}.png` });
@@ -177,7 +172,7 @@ test('sound, reduced motion, mistakes, recovery, and fit controls stay usable', 
   await expect(page.getByRole('status')).toContainText('Choose separate branches');
   await page.getByRole('button', { name: 'Reset', exact: true }).click();
   await page.getByRole('button', { name: 'A little hint', exact: true }).click();
-  if (await page.locator('.compact-play').count()) await expect(page.locator('.branch-navigation option[data-hinted]')).toHaveCount(2); else await expect(page.locator('.hinted')).toHaveCount(2);
+  await expect(page.locator('.hinted')).toHaveCount(2);
 });
 
 test('studio builds a full 31-node mosaic and handles its limit without losing work', async ({ page }) => {

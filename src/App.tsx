@@ -43,21 +43,12 @@ function layout(tree: Tree) {
   return { placed, width: cursor * 128 + 12, height: Math.max(...placed.map(p => p.y)) + 70 };
 }
 
-function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fit, compact, onExplore }: { tree: Tree; selected: string | null; onSelect: (id: string) => void; onSwap: (a: string, b: string) => void; level: Level; sandbox: boolean; hinted: Move | null; fit: boolean; compact: boolean; onExplore: () => void }) {
-  const [focusId, setFocusId] = useState(tree.id);
-  const focus = find(tree, focusId) || tree;
-  const parent = nodes(tree).find(n => n.kind === 'split' && (n.yes.id === focus.id || n.no.id === focus.id));
-  const focused = compact && !fit;
+function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fit, compact }: { tree: Tree; selected: string | null; onSelect: (id: string) => void; onSwap: (a: string, b: string) => void; level: Level; sandbox: boolean; hinted: Move | null; fit: boolean; compact: boolean }) {
   const diagram = layout(tree);
+  const { placed, width, height } = diagram;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [viewportWidth, setViewportWidth] = useState(diagram.width);
-  const [viewportHeight, setViewportHeight] = useState(diagram.height);
-  const horizontal = focused && viewportWidth > 320 && viewportHeight < 160;
-  const placed: PlacedNode[] = focused ? [{ node: focus, x: horizontal ? focus.kind === 'leaf' ? 192 : 64 : 134, y: horizontal ? 56 : 28 }, ...(focus.kind === 'split' ? [
-    { node: focus.yes, x: horizontal ? 210 : 66, y: horizontal ? 28 : 100, parent: focus.id, side: 'yes' as const },
-    { node: focus.no, x: horizontal ? 210 : 202, y: horizontal ? 84 : 100, parent: focus.id, side: 'no' as const },
-  ] : [])] : diagram.placed;
-  const width = focused ? horizontal ? 384 : 268 : diagram.width, height = focused ? horizontal ? 112 : 160 : diagram.height;
+  const [viewportWidth, setViewportWidth] = useState(width);
+  const [viewportHeight, setViewportHeight] = useState(height);
   useEffect(() => {
     const measure = () => {
       const pane = scrollRef.current;
@@ -74,15 +65,16 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fi
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
   }, [width, height, compact]);
   useEffect(() => {
-    setFocusId(tree.id);
-  }, [level.id, sandbox, tree.id]);
-  const scale = compact || fit ? Math.min(1, viewportWidth / width, viewportHeight / height) : 1;
+    const pane = scrollRef.current;
+    if (pane) { pane.scrollLeft = Math.max(0, (pane.scrollWidth - pane.clientWidth) / 2); pane.scrollTop = 0; }
+  }, [level.id, sandbox, fit]);
+  const scale = fit ? Math.min(1, viewportWidth / width, viewportHeight / height) : 1;
   const dragged = useRef<{ id: string; pointer: number; startX: number; startY: number; x: number; y: number; offsetX: number; offsetY: number; width: number; height: number; fontSize: number; active: boolean } | null>(null);
   const stopDragScroll = useRef<(() => void) | null>(null);
   const [ghost, setGhost] = useState<{ node: Tree; x: number; y: number; width: number; height: number; fontSize: number } | null>(null);
   const suppressClick = useRef(false);
   const cancelDrag = () => { stopDragScroll.current?.(); stopDragScroll.current = null; if (dragged.current?.active) suppressClick.current = true; dragged.current = null; setGhost(null); };
-  useEffect(() => { cancelDrag(); }, [tree, level.id, sandbox, focusId]);
+  useEffect(() => { cancelDrag(); }, [tree, level.id, sandbox]);
   useEffect(() => {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') cancelDrag(); };
     document.addEventListener('keydown', escape); window.addEventListener('blur', cancelDrag);
@@ -90,20 +82,14 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fi
   }, []);
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const available = (node: Tree) => sandbox || (level.mode === 'leaves' ? node.kind === 'leaf' : level.mode === 'rules' ? node.kind === 'split' : true);
-  const jump = (id: string) => { setFocusId(id); onExplore(); };
-  function pathLabels(node: Tree, path = 'Start'): { id: string; label: string }[] {
-    const label = node.kind === 'leaf' ? palette[node.color].label : `${node.rule.axis} < ${node.rule.value}`;
-    return [{ id: node.id, label: `${path} · ${label}` }, ...(node.kind === 'split' ? [...pathLabels(node.yes, `${path} / yes`), ...pathLabels(node.no, `${path} / no`)] : [])];
-  }
-  return <div className={`tree-view ${focused ? 'branch-view' : ''}`}>
-    {compact && <div className="branch-navigation"><button aria-label="Go to parent branch" disabled={!parent} onClick={() => jump(parent!.id)}><ArrowLeft size={13} />Up</button><select aria-label="Explore tree" value={focus.id} onChange={event => jump(event.target.value)}>{pathLabels(tree).map(item => <option key={item.id} value={item.id} data-hinted={hinted?.includes(item.id) || undefined}>{hinted?.includes(item.id) ? 'Hint: ' : ''}{item.label}</option>)}</select><button aria-label="Go to tree root" disabled={focus.id === tree.id && !fit} onClick={() => jump(tree.id)}>Root</button></div>}
+  return <div className="tree-view">
     <div className="tree-scroll" ref={scrollRef}><div className="tree-scaled" style={{ width: width * scale, height: height * scale }}><div className="tree-canvas" style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
     <svg className="connections" width={width} height={height} aria-hidden="true">{placed.filter(p => p.parent).map(p => {
       const parent = placed.find(q => q.node.id === p.parent)!;
       const emphasized = selected && (find(tree, selected) && find(find(tree, selected)!, p.node.id));
-      const mid = focused ? 64 : parent.y + 64;
-      const labelX = horizontal ? 137 : (p.x + parent.x) / 2, labelY = horizontal ? p.y : mid;
-      return <g key={p.node.id}><path className={emphasized ? 'edge-active' : ''} d={horizontal ? `M${parent.x + 52},${parent.y} H137 V${p.y} H${p.x - 52}` : focused ? `M${parent.x},${parent.y + 23} V${mid} H${p.x} V${p.y - 23}` : `M${parent.x},${parent.y + 24} V${parent.y + 55} Q${parent.x},${parent.y + 64} ${parent.x + (p.x > parent.x ? 10 : -10)},${parent.y + 64} H${p.x + (p.x > parent.x ? -10 : 10)} Q${p.x},${parent.y + 64} ${p.x},${parent.y + 74} V${p.y - 24}`} /><rect x={labelX - 16} y={labelY - 9} width="32" height="18" rx="5" /><text x={labelX} y={labelY + 4}>{p.side === 'yes' ? 'yes' : 'no'}</text></g>;
+      const mid = parent.y + 64;
+      const labelX = (p.x + parent.x) / 2, labelY = mid;
+      return <g key={p.node.id}><path className={emphasized ? 'edge-active' : ''} d={`M${parent.x},${parent.y + 24} V${parent.y + 55} Q${parent.x},${parent.y + 64} ${parent.x + (p.x > parent.x ? 10 : -10)},${parent.y + 64} H${p.x + (p.x > parent.x ? -10 : 10)} Q${p.x},${parent.y + 64} ${p.x},${parent.y + 74} V${p.y - 24}`} /><rect x={labelX - 16} y={labelY - 9} width="32" height="18" rx="5" /><text x={labelX} y={labelY + 4}>{p.side === 'yes' ? 'yes' : 'no'}</text></g>;
     })}</svg>
     {placed.map(({ node, x, y }) => {
       const eligible = available(node), validTarget = selected && canSwap(tree, selected, node.id, level.mode);
@@ -141,7 +127,6 @@ function TreeView({ tree, selected, onSelect, onSwap, level, sandbox, hinted, fi
         {selected === node.id && <span className="picked-label">SELECTED</span>}
       </button>;
     })}
-    {focused && focus.kind === 'split' && [focus.yes, focus.no].map((child, i) => child.kind === 'split' && <button key={`explore-${child.id}`} className="open-branch" style={{ left: horizontal ? 320 : i === 0 ? 66 : 202, top: horizontal ? i === 0 ? 13 : 69 : 128 }} aria-label={`Open ${i === 0 ? 'yes' : 'no'} branch`} onClick={() => jump(child.id)}>Open branch <ChevronDown size={11} /></button>)}
   </div></div></div>
     {ghost && createPortal(<div className="drag-layer" aria-hidden="true"><div className="drag-ghost" style={{ width: ghost.width, height: ghost.height, fontSize: ghost.fontSize, transform: `translate3d(${ghost.x}px, ${ghost.y}px, 0)` }}>
       {ghost.node.kind === 'leaf' ? <><span className="node-swatch" style={{ background: palette[ghost.node.color].hex }} /><span>{palette[ghost.node.color].label}</span></> : <><GitBranch size="1.25em" /><span>{ghost.node.rule.axis} &lt; {ghost.node.rule.value}</span></>}
@@ -287,11 +272,11 @@ export default function App() {
 
             <section className="logic-panel" aria-label="Decision tree editor">
               {burst && <div key={burst.id} className={`feedback-burst feedback-${burst.kind}`} aria-hidden="true">{Array.from({ length: burst.kind === 'win' ? 16 : 6 }, (_, i) => <i key={i} style={{ '--angle': `${i * 137.5}deg`, '--distance': `${32 + i % 4 * 17}px`, '--delay': `${i % 4 * 25}ms` } as React.CSSProperties} />)}{burst.kind === 'win' && <span>Beautifully done!</span>}</div>}
-              <div className="logic-toolbar" hidden={showCompletion}>{solved ? <button className="review-toggle text-button" onClick={() => setReviewSolved(false)}>Hide puzzle</button> : <div className="panel-label"><GitBranch size={15} /><span>YOUR DECISION TREE</span></div>}<span className="node-count">{nodes(tree).length} nodes <button className="fit-button" aria-label={fitTree ? 'Show tree at actual size' : 'Fit whole tree'} aria-pressed={fitTree} onClick={() => setFitTree(!fitTree)}><Maximize2 size={13} />{compact ? fitTree ? 'Branches' : 'Overview' : fitTree ? '100%' : 'Fit'}</button></span></div>
+              <div className="logic-toolbar" hidden={showCompletion}>{solved ? <button className="review-toggle text-button" onClick={() => setReviewSolved(false)}>Hide puzzle</button> : <div className="panel-label"><GitBranch size={15} /><span>YOUR DECISION TREE</span></div>}<span className="node-count">{nodes(tree).length} nodes <button className="fit-button" aria-label={fitTree ? 'Show tree at actual size' : 'Fit whole tree'} aria-pressed={fitTree} onClick={() => setFitTree(!fitTree)}><Maximize2 size={13} />{fitTree ? '100%' : 'Fit'}</button></span></div>
               <div className="stats-row">{sandbox ? <><div><strong>{nodes(tree).filter(n => n.kind === 'split').length}</strong><span>decisions</span></div><div><strong>{nodes(tree).filter(n => n.kind === 'leaf').length}</strong><span>color leaves</span></div><div><strong>8 × 8</strong><span>possibilities</span></div></> : <><div className={solved ? 'stat-success' : ''}><strong>{Math.round(match * 100)}<small>%</small></strong><span>picture match</span></div><div><strong>{moves.toString().padStart(2, '0')}</strong><span>{moves === 1 ? 'swap made' : 'swaps made'}</span></div><div><strong>{level.par}<small>{level.par === 1 ? ' swap' : ' swaps'}</small></strong><span>three-star target</span></div></>}</div>
               {showCompletion && <div className="completion-panel success-card" aria-live="polite"><span className="completion-icon"><Check size={18} />PUZZLE COMPLETE</span><h3>{level.id === 12 ? 'A beautiful finish.' : 'Everything clicked.'}</h3><p>Picture restored in {moves} {moves === 1 ? 'swap' : 'swaps'}.</p><StarRow count={stars(moves, level.par)} /><button className="button secondary" onClick={() => { setBurst(null); setReviewSolved(true); }}>Show puzzle again</button></div>}
-              <div className={`tree-area ${solved ? 'tree-solved' : ''}`} hidden={showCompletion}>{!showCompletion && <TreeView tree={tree} selected={selected} onSelect={selectNode} onSwap={swapNodes} level={level} sandbox={sandbox} hinted={hinted} fit={fitTree} compact={compact} onExplore={() => setFitTree(false)} />}
-                {!sandbox && <div className="tree-legend"><span><GitBranch size={12} /> A question</span><span><span className="legend-square" /> A color</span><span>yes ← → no</span><span className="pan-tip">{compact ? 'Open a branch to explore' : 'Drag near an edge to scroll'}</span></div>}
+              <div className={`tree-area ${solved ? 'tree-solved' : ''}`} hidden={showCompletion}>{!showCompletion && <TreeView tree={tree} selected={selected} onSelect={selectNode} onSwap={swapNodes} level={level} sandbox={sandbox} hinted={hinted} fit={fitTree} compact={compact} />}
+                {!sandbox && <div className="tree-legend"><span><GitBranch size={12} /> A question</span><span><span className="legend-square" /> A color</span><span>yes ← → no</span><span className="pan-tip">Drag near an edge to scroll</span></div>}
               </div>
 
               {sandbox ? <div className="studio-controls"><div className="studio-controls-title"><Scissors size={16} /><strong>{selectedNode ? selectedNode.kind === 'leaf' ? 'Make this region yours' : 'Edit this decision' : 'Select a card to start creating'}</strong></div><p>Questions use the full canvas coordinates, from 0 to 7.</p>
@@ -302,7 +287,7 @@ export default function App() {
                   else { const uid = crypto.randomUUID(); edit({ id: selectedNode.id, kind: 'split', rule: { axis, value: threshold }, yes: { ...selectedNode, id: `${uid}-yes` }, no: { id: `${uid}-no`, kind: 'leaf', color: paint } }); }
                 }}>{selectedNode?.kind === 'split' ? 'Update rule' : 'Split region'}</button></div>
                 {selectedNode?.kind === 'split' && <button className="text-button" onClick={() => edit({ id: selectedNode.id, kind: 'leaf', color: paint })}>Collapse branch to selected color</button>}<span className="studio-limit">Up to 31 nodes. Select a leaf to paint, or split it into two regions.</span>
-              </div> : !solved && <div className="instruction-card" aria-live="polite"><><span className="instruction-icon"><MousePointer2 size={19} /></span><div><strong>{selected ? compact && selectedNode ? `${selectedNode.kind === 'leaf' ? palette[selectedNode.color].label : `${selectedNode.rule.axis} < ${selectedNode.rule.value}`} selected` : 'Now pick its new home.' : level.mode === 'leaves' ? 'Two colors. One little swap.' : level.mode === 'rules' ? 'Right question, wrong place.' : 'A branch brings its whole world.'}</strong><p>{selected ? compact ? 'Explore another branch to find its swap. Tap again to cancel.' : 'Tap another compatible card to swap. Tap the selected card to cancel.' : level.mode === 'leaves' ? 'Tap a color leaf, then tap another to swap their colors.' : level.mode === 'rules' ? 'Tap two question cards to swap their rules. Their children stay put.' : 'Tap two separate branches to swap them, including all their children.'}</p></div></></div>}
+              </div> : !solved && <div className="instruction-card" aria-live="polite"><><span className="instruction-icon"><MousePointer2 size={19} /></span><div><strong>{selected ? compact && selectedNode ? `${selectedNode.kind === 'leaf' ? palette[selectedNode.color].label : `${selectedNode.rule.axis} < ${selectedNode.rule.value}`} selected` : 'Now pick its new home.' : level.mode === 'leaves' ? 'Two colors. One little swap.' : level.mode === 'rules' ? 'Right question, wrong place.' : 'A branch brings its whole world.'}</strong><p>{selected ? compact ? 'Scroll to another card to swap. Tap again to cancel.' : 'Tap another compatible card to swap. Tap the selected card to cancel.' : level.mode === 'leaves' ? 'Tap a color leaf, then tap another to swap their colors.' : level.mode === 'rules' ? 'Tap two question cards to swap their rules. Their children stay put.' : 'Tap two separate branches to swap them, including all their children.'}</p></div></></div>}
 
               <div className="game-actions"><div><button className="icon-action" data-undo onClick={undo} disabled={!history.length} title="Undo (Ctrl or ⌘ Z)"><Undo2 size={16} /><span>Undo</span></button><button className="icon-action" onClick={() => load(levelIndex, sandbox, true)} disabled={!history.length && !selected && !hinted && (!sandbox || (tree.kind === 'leaf' && tree.color === 'sky'))}><RotateCcw size={15} /><span>Reset</span></button></div>{sandbox ? <span className="studio-note"><Sprout size={15} /> Make something small & lovely.</span> : solved ? <button className="button primary" onClick={() => levelIndex < levels.length - 1 ? load(levelIndex + 1) : setModal('levels')}>{levelIndex < 11 ? 'Next puzzle' : 'See your journey'}<ArrowRight size={15} /></button> : <button className="hint-button" onClick={showHint}><Lightbulb size={16} />A little hint</button>}</div>
               <div className="notice" role="status">{notice}</div>
@@ -316,7 +301,7 @@ export default function App() {
     </main>
     <footer className="site-footer"><span><GitBranch size={14} />Made of little decisions.</span><a href="https://github.com/MisterTea/decision_tree_game" target="_blank" rel="noreferrer">View on GitHub <ArrowRight size={12} /></a><span>A puzzle by MisterTea</span></footer>
 
-    <dialog aria-label={modal === 'help' ? 'How to play' : 'Choose a puzzle'} ref={dialogRef} onCancel={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) setModal(null); }}><div className="modal-content"><button className="modal-close" onClick={() => setModal(null)} aria-label="Close dialog"><X size={21} /></button>{modal === 'help' ? <><span className="modal-icon"><Sprout size={28} /></span><div className="eyebrow">WELCOME TO BRANCH & BLOOM</div><h2>A picture made of decisions.</h2><p>Each pixel travels down a tree of questions. A question like <code>x &lt; 4</code> sends pixels in columns 0–3 left (yes), and columns 4–7 right (no). A color leaf paints every pixel that reaches it.</p><div className="help-example"><span>x &lt; 4</span><span>↙ yes &nbsp; &nbsp; no ↘</span><div><i style={{ background: palette.sky.hex }} /><i style={{ background: palette.peach.hex }} /></div></div><ol><li><strong>Look at the target.</strong> Recreate its colors and shapes with the tree you have.</li><li><strong>Tap two cards to swap.</strong> Use a mouse or touch. You can also drag one card onto another, or use Tab and Enter.</li><li><strong>Let the tree grow with you.</strong> Start with color leaves, graduate to rules, then move entire subtrees.</li></ol><p>On phones, open a branch to explore its children. Use Up, Root, or the tree selector to move around. Your selected card stays selected while you explore. Overview shows the entire tree; Branches returns to readable cards.</p><p>Coordinates start at 0 in the top-left. x goes right; y goes down. Questions always use the full canvas coordinates.</p><p>Earn three stars by matching the target within the swap target. There’s no move limit: take your time, undo freely, and use hints when you need them. Progress saves in this browser when storage is available.</p><button className="button primary" onClick={() => setModal(null)}>Let’s make something click<ArrowRight size={16} /></button></> : <><div className="eyebrow">TWELVE LITTLE MOMENTS OF CLARITY</div><h2>Your growing collection.</h2><p>{completed} of 12 pictures restored. Every puzzle is ready whenever you are.</p>{chapters.map((chapter, i) => <div className="level-collection" key={chapter.title}><h3><chapter.icon size={17} />{chapter.title}<span>{chapter.subtitle}</span></h3><div className="level-grid">{levels.slice(i * 4, i * 4 + 4).map(l => <button key={l.id} onClick={() => load(l.id - 1)}><PixelPicture tree={l.target} label={`Preview: ${l.title}`} /><span className="collection-level">{String(l.id).padStart(2, '0')}</span><strong>{l.title}</strong><StarRow count={progress[l.id] !== undefined ? stars(progress[l.id], l.par) : 0} /></button>)}</div></div>)}</>}</div></dialog>
+    <dialog aria-label={modal === 'help' ? 'How to play' : 'Choose a puzzle'} ref={dialogRef} onCancel={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) setModal(null); }}><div className="modal-content"><button className="modal-close" onClick={() => setModal(null)} aria-label="Close dialog"><X size={21} /></button>{modal === 'help' ? <><span className="modal-icon"><Sprout size={28} /></span><div className="eyebrow">WELCOME TO BRANCH & BLOOM</div><h2>A picture made of decisions.</h2><p>Each pixel travels down a tree of questions. A question like <code>x &lt; 4</code> sends pixels in columns 0–3 left (yes), and columns 4–7 right (no). A color leaf paints every pixel that reaches it.</p><div className="help-example"><span>x &lt; 4</span><span>↙ yes &nbsp; &nbsp; no ↘</span><div><i style={{ background: palette.sky.hex }} /><i style={{ background: palette.peach.hex }} /></div></div><ol><li><strong>Look at the target.</strong> Recreate its colors and shapes with the tree you have.</li><li><strong>Tap two cards to swap.</strong> Use a mouse or touch. You can also drag one card onto another, or use Tab and Enter.</li><li><strong>Let the tree grow with you.</strong> Start with color leaves, graduate to rules, then move entire subtrees.</li></ol><p>Scroll the tree pane to explore the whole tree. While dragging a card, hold near an edge to scroll to a distant card. Fit shows the entire tree; 100% returns to full-size cards. You can also tap two cards to swap, scrolling between them as needed.</p><p>Coordinates start at 0 in the top-left. x goes right; y goes down. Questions always use the full canvas coordinates.</p><p>Earn three stars by matching the target within the swap target. There’s no move limit: take your time, undo freely, and use hints when you need them. Progress saves in this browser when storage is available.</p><button className="button primary" onClick={() => setModal(null)}>Let’s make something click<ArrowRight size={16} /></button></> : <><div className="eyebrow">TWELVE LITTLE MOMENTS OF CLARITY</div><h2>Your growing collection.</h2><p>{completed} of 12 pictures restored. Every puzzle is ready whenever you are.</p>{chapters.map((chapter, i) => <div className="level-collection" key={chapter.title}><h3><chapter.icon size={17} />{chapter.title}<span>{chapter.subtitle}</span></h3><div className="level-grid">{levels.slice(i * 4, i * 4 + 4).map(l => <button key={l.id} onClick={() => load(l.id - 1)}><PixelPicture tree={l.target} label={`Preview: ${l.title}`} /><span className="collection-level">{String(l.id).padStart(2, '0')}</span><strong>{l.title}</strong><StarRow count={progress[l.id] !== undefined ? stars(progress[l.id], l.par) : 0} /></button>)}</div></div>)}</>}</div></dialog>
   </div>;
 }
 
