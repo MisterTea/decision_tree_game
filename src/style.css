@@ -60,3 +60,5 @@
 .tree-scaled{overflow:hidden}
 
 .site-header nav button:focus-visible{outline-offset:-7px;border-radius:6px}
+
+.axis-origin{top:auto;bottom:3px}

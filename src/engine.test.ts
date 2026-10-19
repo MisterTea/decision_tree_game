@@ -1,11 +1,17 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { accuracy, canSwap, colorAt, extendRoute, hint, levels, nodes, stars, swap, update, visits } from './engine';
+import { accuracy, canSwap, colorAt, extendRoute, hint, levels, nodes, pixelCoordinates, pixels, stars, swap, update, visits } from './engine';
 
-test('coordinates start at the top left and thresholds are exclusive', () => {
+test('coordinates start at the bottom left and thresholds are exclusive', () => {
   const target = levels[0].target;
+  assert.deepEqual(pixelCoordinates(0), { x: 0, y: 7 });
+  assert.deepEqual(pixelCoordinates(63), { x: 7, y: 0 });
   assert.equal(colorAt(target, 0, 3), 'sky');
   assert.equal(colorAt(target, 7, 4), 'peach');
+  assert.equal(pixels(target)[0], 'peach');
+  assert.equal(pixels(target)[63], 'sky');
+  assert.equal(pixels(levels[0].initial)[0], 'sky');
+  assert.equal(pixels(levels[0].initial)[63], 'peach');
   assert.equal(visits(target, 'b', 7, 3), true);
   assert.equal(visits(target, 'b', 7, 4), false);
 });

@@ -6,7 +6,7 @@ A React + TypeScript puzzle game about drawing pixel art with decision trees.
 
 ## Play
 
-Recreate the target 8×8 picture by repairing a scrambled decision tree. Every pixel follows coordinate questions from the root until it reaches a color leaf. Coordinates are zero-based: x goes right, y goes down. All questions use full-canvas coordinates.
+Recreate the target 8×8 picture by repairing a scrambled decision tree. Every pixel follows coordinate questions from the root until it reaches a color leaf. Coordinates are zero-based from the bottom-left: x goes right and y goes up. All questions use full-canvas coordinates.
 
 The 12-puzzle campaign introduces three mechanics:
 

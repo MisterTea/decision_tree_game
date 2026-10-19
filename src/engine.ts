@@ -23,7 +23,15 @@ export function colorAt(tree: Tree, x: number, y: number): Color {
   if (tree.kind === 'leaf') return tree.color;
   return colorAt((tree.rule.axis === 'x' ? x : y) < tree.rule.value ? tree.yes : tree.no, x, y);
 }
-export function pixels(tree: Tree): Color[] { return Array.from({ length: SIZE * SIZE }, (_, i) => colorAt(tree, i % SIZE, Math.floor(i / SIZE))); }
+export function pixelCoordinates(index: number): { x: number; y: number } {
+  return { x: index % SIZE, y: SIZE - 1 - Math.floor(index / SIZE) };
+}
+export function pixels(tree: Tree): Color[] {
+  return Array.from({ length: SIZE * SIZE }, (_, i) => {
+    const { x, y } = pixelCoordinates(i);
+    return colorAt(tree, x, y);
+  });
+}
 export function accuracy(tree: Tree, target: Tree): number { const expected = pixels(target); return pixels(tree).filter((p, i) => p === expected[i]).length / 64; }
 export function visits(tree: Tree, id: string, x: number, y: number): boolean {
   if (tree.id === id) return true;
@@ -92,14 +100,14 @@ const garden = split('a', 'x', 4, split('b', 'y', 4, leaf('d', 'rose'), leaf('e'
 const quilt = split('a', 'y', 4, split('b', 'x', 4, leaf('d', 'rose'), leaf('e', 'cream')), split('c', 'x', 2, leaf('f', 'blue'), split('g', 'x', 6, leaf('h', 'gold'), leaf('i', 'forest'))));
 const grove = split('a', 'x', 4, split('b', 'y', 2, leaf('d', 'gold'), split('e', 'y', 6, leaf('h', 'forest'), leaf('i', 'cream'))), split('c', 'y', 5, split('f', 'x', 6, leaf('j', 'rose'), leaf('k', 'lilac')), leaf('g', 'blue')));
 export const levels: Level[] = [
-  level(1, 'A change of scenery', 'Every picture starts with a little logic.', 'leaves', horizon, [['b', 'c']], 'The top half is sky. The bottom half is peach. Swap the two color leaves to put them home.'),
+  level(1, 'A change of scenery', 'Every picture starts with a little logic.', 'leaves', horizon, [['b', 'c']], 'The bottom half is sky. The top half is peach. Swap the two color leaves to put them home.'),
   level(2, 'Four little corners', 'Four colors. One small mix-up.', 'leaves', quarters, [['d', 'g']], 'The root divides left from right. Each child then divides top from bottom. Follow the path to each corner.'),
-  level(3, 'Golden hour', 'Bring the sunset back into order.', 'leaves', stripes, [['b', 'f'], ['d', 'g']], 'Each question peels off a horizontal band. Work from the top band down.'),
-  level(4, 'A place in the sun', 'A tiny landscape, waiting to be repaired.', 'leaves', house, [['d', 'h'], ['e', 'f']], 'The first question separates the sky from the ground. Match each leaf to its region.'),
+  level(3, 'Golden hour', 'Bring the sunset back into order.', 'leaves', stripes, [['b', 'f'], ['d', 'g']], 'Each question peels off a horizontal band. Work from the bottom band up.'),
+  level(4, 'A place in the sun', 'A tiny landscape, waiting to be repaired.', 'leaves', house, [['d', 'h'], ['e', 'f']], 'The first question separates the lower three rows from the upper five. Match each leaf to its region.'),
   level(5, 'Crossed wires', 'The colors are right. The questions are not.', 'rules', quarters, [['a', 'b']], 'The whole picture needs a left/right split first, followed by top/bottom splits. Swap question cards.'),
   level(6, 'Window light', 'Same colors, different proportions.', 'rules', windowTree, [['a', 'c'], ['a', 'b']], 'Start with x < 4 at the root. The left side changes at y = 3, the right at y = 5.'),
-  level(7, 'City at dusk', 'Find the rhythm in the skyline.', 'rules', skyline, [['a', 'd'], ['b', 'e']], 'The ground begins at y = 6. Above it, x < 3 separates the two buildings.'),
-  level(8, 'Secret garden', 'Make room for everything to grow.', 'rules', garden, [['a', 'g'], ['b', 'c']], 'Split left and right first. The left changes at y = 4; on the right, peel off the top two rows.'),
+  level(7, 'City at dusk', 'Find the rhythm in the skyline.', 'rules', skyline, [['a', 'd'], ['b', 'e']], 'The forest begins at y = 6. Below it, x < 3 separates the two columns.'),
+  level(8, 'Secret garden', 'Make room for everything to grow.', 'rules', garden, [['a', 'g'], ['b', 'c']], 'Split left and right first. The left changes at y = 4; on the right, peel off the bottom two rows.'),
   level(9, 'Branching out', 'Pick up a branch. Bring its world along.', 'subtrees', quarters, [['b', 'c']], 'Swap the two question subtrees directly below the root. Their color leaves will travel with them.'),
   level(10, 'Patchwork', 'A small branch can hold a whole picture.', 'subtrees', quilt, [['d', 'g']], 'A single color and a whole decision branch can trade places. Watch the tree change shape.'),
   level(11, 'Wild growth', 'Untangle the garden, one branch at a time.', 'subtrees', garden, [['b', 'g'], ['d', 'f']], 'Some colors are nested inside a moved branch. Restore those colors, then return the branches.'),
